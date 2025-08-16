@@ -1,4 +1,2 @@
-mahim|fahim|5555|5555|555
-hh|jj|12-45-86|45:56|100
-Mraj|lima|00:00|00:00|2
-faijar biya|chandpur|32:08:2025|12:12|-100
+Faija's Wedding|Chandpur|17/08/2025|12:12|500
+Shunno Concert|DIU Campus|18/05/2025|18:45|1000

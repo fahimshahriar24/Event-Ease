@@ -4,9 +4,13 @@
 #include <windows.h>
 #include <conio.h>
 #include <time.h>
+#include <ctype.h>
 
 #define BOOKINGS_FILE "bookings.txt"
 #define USER_INFO_FILE "user_info.txt"
+
+// Global variable to store the logged-in user's name
+char loggedInUserName[100] = "";
 
 /* ===================== Function Declarations ===================== */
 // UI and Display Functions
@@ -22,7 +26,7 @@ int calculateCenterPosition(int contentWidth);
 void printUnified(const char *str);
 void inputUnified(const char *prompt, char *buffer, int size);
 void inputUnifiedBlock(const char *prompt, char *buffer, int size);
-void printUnifiedBlock(const char *str);
+void printUnifiedBlockLeft(const char *str);
 void resetUnifiedBlock();
 
 // Landing Page and Authentication Functions
@@ -48,18 +52,18 @@ void viewAllUsers();
 
 // Booking Management Functions
 void bookSeat();
+void bookSeatDirectly(int eventID);
 void cancelBooking();
 void saveBooking(int eventID, const char *name);
 void removeBooking(int eventID, const char *name);
 void viewAllBookings();
+void viewEventDetails();
+char* getEventNameByID(int eventID);
 
 /* ===================== Main Function ===================== */
 int main()
 {
     system("chcp 65001");
-    
-    // Remove any existing conflicting files
-    remove("bookings.txt");
     
     // Initialize random seed for ticket code generation
     srand((unsigned int)time(NULL));
@@ -110,9 +114,7 @@ void inputCentered(const char *prompt, char *buffer, int size)
 
 void welcomePage()
 {
-    // Compact ASCII art organized in logical sections
     const char *art[] = {
-        // Top decoration (14 lines)
         "","","                                                                       @@@     ",
         "                                                                     @@@ @@    ",
         "                                                                  @@@@    @@   ",
@@ -125,7 +127,6 @@ void welcomePage()
         "                                                   @@                   #   @@ ",
         "                                                   @@                   @    @@",
         "                                                    @@                       @@",
-        // EVENT text (10 lines)
         "        @@@@@@ @@     @@  @@@@@@ #@@    @@ @@@@@@@@  *@                  @   @ ",
         "        @@@@@@ *@@   @@@ @@@@@@@ @@@@   @@ @@@@@@@@  @@                  @.@@@ ",
         "        @@      @@   @@  @@      @@ @   @@    @@     @                  @@@    ",
@@ -136,7 +137,6 @@ void welcomePage()
         "        @@       @@ @@   @@      @@@  @@@@    @@    @@                 @    @  ",
         "        @@@@@@   .@@@@   @@@@@@@ @@@  @@@@    @@    @                       @  ",
         "        @@@@@@    @@@     @@@@@@ @@@   @@@    @@    @@                 @   @:  ",
-        // EASE text (11 lines)
         "                                                     @                 @   @   ",
         "                        @@@@@   @@+   @@@@  @@@@@   @@                 @    @  ",
         "                        @@     @@@@  @@     @@      @                       @  ",
@@ -320,7 +320,7 @@ void resetUnifiedBlock()
 /**
  * Print text in a unified left-aligned block (centered as a group)
  */
-void printUnifiedBlock(const char *str)
+void printUnifiedBlockLeft(const char *str)
 {
     int currentLen = (int)strlen(str);
     
@@ -363,38 +363,38 @@ void landingPage()
         
         // Use unified block for ALL elements to ensure perfect alignment
         resetUnifiedBlock();
-        printUnifiedBlock("Welcome to Event-Ease!");
-        printUnifiedBlock("=====================");
-        printUnifiedBlock("");
-        printUnifiedBlock("1. New User Registration");
-        printUnifiedBlock("2. Existing User Login");
-        printUnifiedBlock("3. Admin Login");
-        printUnifiedBlock("0. Exit");
+        printUnifiedBlockLeft("Welcome to Event-Ease!");
+        printUnifiedBlockLeft("=====================");
+        printUnifiedBlockLeft("");
+        printUnifiedBlockLeft("1. New User Registration");
+        printUnifiedBlockLeft("2. Existing User Login");
+        printUnifiedBlockLeft("3. Admin Login");
+        printUnifiedBlockLeft("0. Exit");
         
         // Second pass to actually print with alignment
         resetUnifiedBlock();
         unified_blockFirstCall = 0;
         
-        printUnifiedBlock("Welcome to Event-Ease!");
-        printUnifiedBlock("=====================");
-        printUnifiedBlock("");
-        printUnifiedBlock("1. New User Registration");
-        printUnifiedBlock("2. Existing User Login");
-        printUnifiedBlock("3. Admin Login");
-        printUnifiedBlock("0. Exit");
+        printUnifiedBlockLeft("Welcome to Event-Ease!");
+        printUnifiedBlockLeft("=====================");
+        printUnifiedBlockLeft("");
+        printUnifiedBlockLeft("1. New User Registration");
+        printUnifiedBlockLeft("2. Existing User Login");
+        printUnifiedBlockLeft("3. Admin Login");
+        printUnifiedBlockLeft("0. Exit");
         
         char buf[16];
         inputUnifiedBlock("Select an option: ", buf, sizeof(buf));
         if (sscanf(buf, "%d", &choice) != 1)
         {
             resetUnifiedBlock();
-            printUnifiedBlock("Invalid input. Please enter a number.");
-            printUnifiedBlock("Press any key to continue...");
+            printUnifiedBlockLeft("Invalid input. Please enter a number.");
+            printUnifiedBlockLeft("Press any key to continue...");
             
             resetUnifiedBlock();
             unified_blockFirstCall = 0;
-            printUnifiedBlock("Invalid input. Please enter a number.");
-            printUnifiedBlock("Press any key to continue...");
+            printUnifiedBlockLeft("Invalid input. Please enter a number.");
+            printUnifiedBlockLeft("Press any key to continue...");
             
             getch();
             continue;
@@ -421,13 +421,13 @@ void landingPage()
             exit(0);
         default:
             resetUnifiedBlock();
-            printUnifiedBlock("Invalid choice. Please select again.");
-            printUnifiedBlock("Press any key to continue...");
+            printUnifiedBlockLeft("Invalid choice. Please select again.");
+            printUnifiedBlockLeft("Press any key to continue...");
             
             resetUnifiedBlock();
             unified_blockFirstCall = 0;
-            printUnifiedBlock("Invalid choice. Please select again.");
-            printUnifiedBlock("Press any key to continue...");
+            printUnifiedBlockLeft("Invalid choice. Please select again.");
+            printUnifiedBlockLeft("Press any key to continue...");
             
             getch();
         }
@@ -444,15 +444,15 @@ void newUserRegistration()
     
     // Use unified block for header to ensure alignment with content
     resetUnifiedBlock();
-    printUnifiedBlock("=== New User Registration ===");
-    printUnifiedBlock("");
-    printUnifiedBlock("Enter your name: ");
+    printUnifiedBlockLeft("=== New User Registration ===");
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("Enter your name: ");
     
     // Calculate the unified block position first
     resetUnifiedBlock();
     unified_blockFirstCall = 0;
-    printUnifiedBlock("=== New User Registration ===");
-    printUnifiedBlock("");
+    printUnifiedBlockLeft("=== New User Registration ===");
+    printUnifiedBlockLeft("");
     
     // Get user name with validation
     while (1)
@@ -494,11 +494,11 @@ void newUserRegistration()
         {
             // Use unified block for error messages
             resetUnifiedBlock();
-            printUnifiedBlock("Name cannot be empty. Please enter a valid name.");
+            printUnifiedBlockLeft("Name cannot be empty. Please enter a valid name.");
             
             resetUnifiedBlock();
             unified_blockFirstCall = 0;
-            printUnifiedBlock("Name cannot be empty. Please enter a valid name.");
+            printUnifiedBlockLeft("Name cannot be empty. Please enter a valid name.");
             
             printUnified("Press any key to try again...");
             getch();
@@ -506,15 +506,15 @@ void newUserRegistration()
             
             // Redisplay the registration header
             resetUnifiedBlock();
-            printUnifiedBlock("=== New User Registration ===");
-            printUnifiedBlock("");
-            printUnifiedBlock("Enter your name: ");
+            printUnifiedBlockLeft("=== New User Registration ===");
+            printUnifiedBlockLeft("");
+            printUnifiedBlockLeft("Enter your name: ");
             
             // Calculate the unified block position first
             resetUnifiedBlock();
             unified_blockFirstCall = 0;
-            printUnifiedBlock("=== New User Registration ===");
-            printUnifiedBlock("");
+            printUnifiedBlockLeft("=== New User Registration ===");
+            printUnifiedBlockLeft("");
             
             continue;
         }
@@ -524,13 +524,13 @@ void newUserRegistration()
         {
             // Use unified block for error messages
             resetUnifiedBlock();
-            printUnifiedBlock("This name is already registered!");
-            printUnifiedBlock("Please choose a different name.");
+            printUnifiedBlockLeft("This name is already registered!");
+            printUnifiedBlockLeft("Please choose a different name.");
             
             resetUnifiedBlock();
             unified_blockFirstCall = 0;
-            printUnifiedBlock("This name is already registered!");
-            printUnifiedBlock("Please choose a different name.");
+            printUnifiedBlockLeft("This name is already registered!");
+            printUnifiedBlockLeft("Please choose a different name.");
             
             printUnified("Press any key to try again...");
             getch();
@@ -538,15 +538,15 @@ void newUserRegistration()
             
             // Redisplay the registration header
             resetUnifiedBlock();
-            printUnifiedBlock("=== New User Registration ===");
-            printUnifiedBlock("");
-            printUnifiedBlock("Enter your name: ");
+            printUnifiedBlockLeft("=== New User Registration ===");
+            printUnifiedBlockLeft("");
+            printUnifiedBlockLeft("Enter your name: ");
             
             // Calculate the unified block position first
             resetUnifiedBlock();
             unified_blockFirstCall = 0;
-            printUnifiedBlock("=== New User Registration ===");
-            printUnifiedBlock("");
+            printUnifiedBlockLeft("=== New User Registration ===");
+            printUnifiedBlockLeft("");
             
             continue;
         }
@@ -562,15 +562,15 @@ void newUserRegistration()
     {
         // Use unified block for error messages
         resetUnifiedBlock();
-        printUnifiedBlock("Error: Unable to generate unique ticket code.");
-        printUnifiedBlock("Please try again later.");
-        printUnifiedBlock("Press any key to continue...");
+        printUnifiedBlockLeft("Error: Unable to generate unique ticket code.");
+        printUnifiedBlockLeft("Please try again later.");
+        printUnifiedBlockLeft("Press any key to continue...");
         
         resetUnifiedBlock();
         unified_blockFirstCall = 0;
-        printUnifiedBlock("Error: Unable to generate unique ticket code.");
-        printUnifiedBlock("Please try again later.");
-        printUnifiedBlock("Press any key to continue...");
+        printUnifiedBlockLeft("Error: Unable to generate unique ticket code.");
+        printUnifiedBlockLeft("Please try again later.");
+        printUnifiedBlockLeft("Press any key to continue...");
         
         getch();
         return;
@@ -579,28 +579,31 @@ void newUserRegistration()
     // Save user information
     saveUserInfo(ticketCode, name);
     
+    // Store the newly registered user's name for immediate use
+    strcpy(loggedInUserName, name);
+    
     // Display registration success using unified block system
     resetUnifiedBlock();
-    printUnifiedBlock("Registration Successful!");
-    printUnifiedBlock("========================");
-    printUnifiedBlock("");
+    printUnifiedBlockLeft("Registration Successful!");
+    printUnifiedBlockLeft("========================");
+    printUnifiedBlockLeft("");
     char ticketMsg[100];
     snprintf(ticketMsg, sizeof(ticketMsg), "Your ticket code is: %04d", ticketCode);
-    printUnifiedBlock(ticketMsg);
-    printUnifiedBlock("Please remember your ticket code for future logins.");
-    printUnifiedBlock("");
-    printUnifiedBlock("Press any key to continue to your dashboard...");
+    printUnifiedBlockLeft(ticketMsg);
+    printUnifiedBlockLeft("Please remember your ticket code for future logins.");
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("Press any key to continue to your dashboard...");
     
     // Second pass to actually print with alignment
     resetUnifiedBlock();
     unified_blockFirstCall = 0;
-    printUnifiedBlock("Registration Successful!");
-    printUnifiedBlock("========================");
-    printUnifiedBlock("");
-    printUnifiedBlock(ticketMsg);
-    printUnifiedBlock("Please remember your ticket code for future logins.");
-    printUnifiedBlock("");
-    printUnifiedBlock("Press any key to continue to your dashboard...");
+    printUnifiedBlockLeft("Registration Successful!");
+    printUnifiedBlockLeft("========================");
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft(ticketMsg);
+    printUnifiedBlockLeft("Please remember your ticket code for future logins.");
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("Press any key to continue to your dashboard...");
     
     getch();
     
@@ -618,16 +621,16 @@ void existingUserLogin()
     
     // Use unified block for consistent alignment
     resetUnifiedBlock();
-    printUnifiedBlock("=== User Login ===");
-    printUnifiedBlock("");
-    printUnifiedBlock("Enter your name: ");
-    printUnifiedBlock("Enter your 4-digit ticket code: ");
+    printUnifiedBlockLeft("=== User Login ===");
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("Enter your name: ");
+    printUnifiedBlockLeft("Enter your 4-digit ticket code: ");
     
     // Calculate the unified block position first
     resetUnifiedBlock();
     unified_blockFirstCall = 0;
-    printUnifiedBlock("=== User Login ===");
-    printUnifiedBlock("");
+    printUnifiedBlockLeft("=== User Login ===");
+    printUnifiedBlockLeft("");
     
     // Get user credentials with manual positioning
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -666,13 +669,13 @@ void existingUserLogin()
     {
         // Use unified block for error messages
         resetUnifiedBlock();
-        printUnifiedBlock("Invalid ticket code format. Please enter a 4-digit number.");
-        printUnifiedBlock("Press any key to continue...");
+        printUnifiedBlockLeft("Invalid ticket code format. Please enter a 4-digit number.");
+        printUnifiedBlockLeft("Press any key to continue...");
         
         resetUnifiedBlock();
         unified_blockFirstCall = 0;
-        printUnifiedBlock("Invalid ticket code format. Please enter a 4-digit number.");
-        printUnifiedBlock("Press any key to continue...");
+        printUnifiedBlockLeft("Invalid ticket code format. Please enter a 4-digit number.");
+        printUnifiedBlockLeft("Press any key to continue...");
         
         getch();
         return;
@@ -683,13 +686,13 @@ void existingUserLogin()
     {
         // Use unified block for error messages
         resetUnifiedBlock();
-        printUnifiedBlock("Invalid ticket code. Must be between 0000-9999.");
-        printUnifiedBlock("Press any key to continue...");
+        printUnifiedBlockLeft("Invalid ticket code. Must be between 0000-9999.");
+        printUnifiedBlockLeft("Press any key to continue...");
         
         resetUnifiedBlock();
         unified_blockFirstCall = 0;
-        printUnifiedBlock("Invalid ticket code. Must be between 0000-9999.");
-        printUnifiedBlock("Press any key to continue...");
+        printUnifiedBlockLeft("Invalid ticket code. Must be between 0000-9999.");
+        printUnifiedBlockLeft("Press any key to continue...");
         
         getch();
         return;
@@ -698,17 +701,20 @@ void existingUserLogin()
     // Validate user login
     if (validateUserLogin(name, ticketCode))
     {
+        // Store the logged-in user's name for future use
+        strcpy(loggedInUserName, name);
+        
         // Use unified block for success messages
         resetUnifiedBlock();
-        printUnifiedBlock("Login successful!");
-        printUnifiedBlock("Welcome back!");
-        printUnifiedBlock("Press any key to continue to your dashboard...");
+        printUnifiedBlockLeft("Login successful!");
+        printUnifiedBlockLeft("Welcome back!");
+        printUnifiedBlockLeft("Press any key to continue to your dashboard...");
         
         resetUnifiedBlock();
         unified_blockFirstCall = 0;
-        printUnifiedBlock("Login successful!");
-        printUnifiedBlock("Welcome back!");
-        printUnifiedBlock("Press any key to continue to your dashboard...");
+        printUnifiedBlockLeft("Login successful!");
+        printUnifiedBlockLeft("Welcome back!");
+        printUnifiedBlockLeft("Press any key to continue to your dashboard...");
         
         getch();
         
@@ -719,15 +725,15 @@ void existingUserLogin()
     {
         // Use unified block for error messages
         resetUnifiedBlock();
-        printUnifiedBlock("Invalid credentials. Name or ticket code does not match.");
-        printUnifiedBlock("Please check your information and try again.");
-        printUnifiedBlock("Press any key to continue...");
+        printUnifiedBlockLeft("Invalid credentials. Name or ticket code does not match.");
+        printUnifiedBlockLeft("Please check your information and try again.");
+        printUnifiedBlockLeft("Press any key to continue...");
         
         resetUnifiedBlock();
         unified_blockFirstCall = 0;
-        printUnifiedBlock("Invalid credentials. Name or ticket code does not match.");
-        printUnifiedBlock("Please check your information and try again.");
-        printUnifiedBlock("Press any key to continue...");
+        printUnifiedBlockLeft("Invalid credentials. Name or ticket code does not match.");
+        printUnifiedBlockLeft("Please check your information and try again.");
+        printUnifiedBlockLeft("Press any key to continue...");
         
         getch();
     }
@@ -742,16 +748,16 @@ void adminLogin()
     
     // Use unified block for consistent alignment
     resetUnifiedBlock();
-    printUnifiedBlock("=== Admin Login ===");
-    printUnifiedBlock("");
-    printUnifiedBlock("Username: ");
-    printUnifiedBlock("Password: ");
+    printUnifiedBlockLeft("=== Admin Login ===");
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("Username: ");
+    printUnifiedBlockLeft("Password: ");
     
     // Calculate the unified block position first
     resetUnifiedBlock();
     unified_blockFirstCall = 0;
-    printUnifiedBlock("=== Admin Login ===");
-    printUnifiedBlock("");
+    printUnifiedBlockLeft("=== Admin Login ===");
+    printUnifiedBlockLeft("");
     
     // Get admin credentials with manual positioning
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -790,15 +796,15 @@ void adminLogin()
     {
         // Use unified block for success messages
         resetUnifiedBlock();
-        printUnifiedBlock("Admin login successful!");
-        printUnifiedBlock("Access granted to admin panel.");
-        printUnifiedBlock("Press any key to continue...");
+        printUnifiedBlockLeft("Admin login successful!");
+        printUnifiedBlockLeft("Access granted to admin panel.");
+        printUnifiedBlockLeft("Press any key to continue...");
         
         resetUnifiedBlock();
         unified_blockFirstCall = 0;
-        printUnifiedBlock("Admin login successful!");
-        printUnifiedBlock("Access granted to admin panel.");
-        printUnifiedBlock("Press any key to continue...");
+        printUnifiedBlockLeft("Admin login successful!");
+        printUnifiedBlockLeft("Access granted to admin panel.");
+        printUnifiedBlockLeft("Press any key to continue...");
         
         getch();
         
@@ -809,15 +815,15 @@ void adminLogin()
     {
         // Use unified block for error messages
         resetUnifiedBlock();
-        printUnifiedBlock("Invalid admin credentials.");
-        printUnifiedBlock("Access denied.");
-        printUnifiedBlock("Press any key to continue...");
+        printUnifiedBlockLeft("Invalid admin credentials.");
+        printUnifiedBlockLeft("Access denied.");
+        printUnifiedBlockLeft("Press any key to continue...");
         
         resetUnifiedBlock();
         unified_blockFirstCall = 0;
-        printUnifiedBlock("Invalid admin credentials.");
-        printUnifiedBlock("Access denied.");
-        printUnifiedBlock("Press any key to continue...");
+        printUnifiedBlockLeft("Invalid admin credentials.");
+        printUnifiedBlockLeft("Access denied.");
+        printUnifiedBlockLeft("Press any key to continue...");
         
         getch();
     }
@@ -976,24 +982,24 @@ void userDashboard()
         
         // Use unified block for menu items - first pass to collect strings
         resetUnifiedBlock();
-        printUnifiedBlock("1. View Events");
-        printUnifiedBlock("2. Book Seat");
-        printUnifiedBlock("3. Cancel Booking");
-        printUnifiedBlock("4. View All Bookings");
-        printUnifiedBlock("5. Logout");
-        printUnifiedBlock("0. Exit");
+        printUnifiedBlockLeft("1. View Event Details");
+        printUnifiedBlockLeft("2. Book Seat");
+        printUnifiedBlockLeft("3. Cancel Booking");
+        printUnifiedBlockLeft("4. View All Bookings");
+        printUnifiedBlockLeft("5. Logout");
+        printUnifiedBlockLeft("0. Exit");
         
         // Second pass to actually print with alignment
         resetUnifiedBlock();
         unified_blockFirstCall = 0;     // Turn off first_call flag to trigger printing
         
         // Print the same strings again, now they'll be properly aligned
-        printUnifiedBlock("1. View Events");
-        printUnifiedBlock("2. Book Seat");
-        printUnifiedBlock("3. Cancel Booking");
-        printUnifiedBlock("4. View All Bookings");
-        printUnifiedBlock("5. Logout");
-        printUnifiedBlock("0. Exit");
+        printUnifiedBlockLeft("1. View Event Details");
+        printUnifiedBlockLeft("2. Book Seat");
+        printUnifiedBlockLeft("3. Cancel Booking");
+        printUnifiedBlockLeft("4. View All Bookings");
+        printUnifiedBlockLeft("5. Logout");
+        printUnifiedBlockLeft("0. Exit");
         
         char buf[16];
         inputCentered("Select an option: ", buf, sizeof(buf));
@@ -1009,7 +1015,7 @@ void userDashboard()
         {
         case 1:
             clear();
-            viewEvents();
+            viewEventDetails();
             break;
         case 2:
             clear();
@@ -1025,6 +1031,8 @@ void userDashboard()
             break;
         case 5:
             clear();
+            // Clear the logged-in user name when logging out
+            strcpy(loggedInUserName, "");
             printCentered("Logging out...");
             return; // Return to landing page
         case 0:
@@ -1052,24 +1060,24 @@ void adminDashboard()
         
         // Use unified block for menu items - first pass to collect strings
         resetUnifiedBlock();
-        printUnifiedBlock("1. View all bookings");
-        printUnifiedBlock("2. Add Event");
-        printUnifiedBlock("3. View All Events");
-        printUnifiedBlock("4. View All Users");
-        printUnifiedBlock("5. Logout");
-        printUnifiedBlock("0. Exit");
+        printUnifiedBlockLeft("1. View all bookings");
+        printUnifiedBlockLeft("2. Add Event");
+        printUnifiedBlockLeft("3. View All Events");
+        printUnifiedBlockLeft("4. View All Users");
+        printUnifiedBlockLeft("5. Logout");
+        printUnifiedBlockLeft("0. Exit");
         
         // Second pass to actually print with alignment
         resetUnifiedBlock();
         unified_blockFirstCall = 0;     // Turn off first_call flag to trigger printing
         
         // Print the same strings again, now they'll be properly aligned
-        printUnifiedBlock("1. View all bookings");
-        printUnifiedBlock("2. Add Event");
-        printUnifiedBlock("3. View All Events");
-        printUnifiedBlock("4. View All Users");
-        printUnifiedBlock("5. Logout");
-        printUnifiedBlock("0. Exit");
+        printUnifiedBlockLeft("1. View all bookings");
+        printUnifiedBlockLeft("2. Add Event");
+        printUnifiedBlockLeft("3. View All Events");
+        printUnifiedBlockLeft("4. View All Users");
+        printUnifiedBlockLeft("5. Logout");
+        printUnifiedBlockLeft("0. Exit");
         
         char buf[16];
         inputCentered("Select an option: ", buf, sizeof(buf));
@@ -1142,13 +1150,13 @@ void viewEvents()
             snprintf(events[eventCount - 1], sizeof(events[eventCount - 1]), "%s|%s|%s|%s|%d", name, venue, date, time, seatCapacity);
             char buf[200];
             snprintf(buf, sizeof(buf), "%d. %s", eventCount, name);
-            printUnifiedBlock(buf);
+            printUnifiedBlockLeft(buf);
         }
     }
     fclose(file);
     char buf[100];
     snprintf(buf, sizeof(buf), "%d. Return to main menu", eventCount + 1);
-    printUnifiedBlock(buf);
+    printUnifiedBlockLeft(buf);
     
     // Second pass - actually print with proper alignment
     resetUnifiedBlock();
@@ -1161,13 +1169,13 @@ void viewEvents()
         if (sscanf(events[i], "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity) == 5) {
             char buf[200];
             snprintf(buf, sizeof(buf), "%d. %s", i + 1, name);
-            printUnifiedBlock(buf);
+            printUnifiedBlockLeft(buf);
         }
     }
     
     // Print the return option
     snprintf(buf, sizeof(buf), "%d. Return to main menu", eventCount + 1);
-    printUnifiedBlock(buf);
+    printUnifiedBlockLeft(buf);
 
     if (eventCount == 0)
         return;
@@ -1213,6 +1221,160 @@ void viewEvents()
     char continueBuf[10];
     inputCentered("Press Enter to continue...", continueBuf, sizeof(continueBuf));
     clear(); // Clear screen after viewing event details
+}
+
+/**
+ * View event details with booking options
+ * Shows events list, then detailed view with booking options
+ */
+void viewEventDetails()
+{
+    FILE *file = fopen("events.txt", "r");
+    if (file == NULL)
+    {
+        printCentered("No events found.");
+        printCentered("Press any key to continue...");
+        getch();
+        return;
+    }
+
+    char line[300], name[100], venue[100], date[20], time[20];
+    int seatCapacity;
+    int eventCount = 0;
+    char events[50][300]; // Store up to 50 events
+
+    printCentered("-- Available Events --");
+    
+    // First pass - collect all event strings
+    resetUnifiedBlock();
+    while (fgets(line, sizeof(line), file))
+    {
+        if (sscanf(line, "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity) == 5)
+        {
+            eventCount++;
+            snprintf(events[eventCount - 1], sizeof(events[eventCount - 1]), "%s|%s|%s|%s|%d", name, venue, date, time, seatCapacity);
+            char buf[200];
+            snprintf(buf, sizeof(buf), "%d. %s", eventCount, name);
+            printUnifiedBlockLeft(buf);
+        }
+    }
+    fclose(file);
+    
+    if (eventCount == 0)
+    {
+        printCentered("No events available.");
+        printCentered("Press any key to continue...");
+        getch();
+        return;
+    }
+    
+    char buf[100];
+    snprintf(buf, sizeof(buf), "%d. Return to main menu", eventCount + 1);
+    printUnifiedBlockLeft(buf);
+    
+    // Second pass - actually print with proper alignment
+    resetUnifiedBlock();
+    unified_blockFirstCall = 0;  // Turn off first_call flag to trigger printing
+    
+    // Print the event list again with proper alignment
+    for (int i = 0; i < eventCount; i++) {
+        char name[100], venue[100], date[20], time[20];
+        int seatCapacity;
+        if (sscanf(events[i], "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity) == 5) {
+            char buf[200];
+            snprintf(buf, sizeof(buf), "%d. %s", i + 1, name);
+            printUnifiedBlockLeft(buf);
+        }
+    }
+    
+    // Print the return option
+    snprintf(buf, sizeof(buf), "%d. Return to main menu", eventCount + 1);
+    printUnifiedBlockLeft(buf);
+
+    // Get user's event selection
+    int choice;
+    char selectPrompt[100];
+    snprintf(selectPrompt, sizeof(selectPrompt), "Enter event ID to view details: ");
+    char buf_input[16];
+    inputCentered(selectPrompt, buf_input, sizeof(buf_input));
+    if (sscanf(buf_input, "%d", &choice) != 1)
+    {
+        printCentered("Invalid input.");
+        printCentered("Press any key to continue...");
+        getch();
+        return;
+    }
+    if (choice < 1 || choice > eventCount + 1)
+    {
+        printCentered("Invalid choice.");
+        printCentered("Press any key to continue...");
+        getch();
+        return;
+    }
+    if (choice == eventCount + 1)
+    {
+        clear(); // Clear screen before returning to dashboard
+        return;
+    }
+
+    // Show details for selected event
+    clear();
+    sscanf(events[choice - 1], "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity);
+    printCentered("--- Event Details ---");
+    printCentered("");
+    
+    char detail_buf[200];
+    snprintf(detail_buf, sizeof(detail_buf), "Name: %s", name);
+    printCentered(detail_buf);
+    snprintf(detail_buf, sizeof(detail_buf), "Venue: %s", venue);
+    printCentered(detail_buf);
+    snprintf(detail_buf, sizeof(detail_buf), "Date (DD-MM-YYYY): %s", date);
+    printCentered(detail_buf);
+    snprintf(detail_buf, sizeof(detail_buf), "Time: %s", time);
+    printCentered(detail_buf);
+    snprintf(detail_buf, sizeof(detail_buf), "Seat Capacity: %d", seatCapacity);
+    printCentered(detail_buf);
+    printCentered("");
+    
+    // Show booking options
+    printCentered("[B] Book this event");
+    printCentered("[R] Return to list");
+    printCentered("[M] Main menu");
+    printCentered("");
+
+    // Get user's action choice
+    char action;
+    char actionPrompt[50] = "Choose an option (B/R/M): ";
+    char actionBuf[16];
+    inputCentered(actionPrompt, actionBuf, sizeof(actionBuf));
+    
+    if (strlen(actionBuf) > 0)
+    {
+        action = toupper(actionBuf[0]); // Convert to uppercase for easy comparison
+    }
+    else
+    {
+        action = 'M'; // Default to main menu if no input
+    }
+
+    switch (action)
+    {
+    case 'B':
+        // Book this event directly
+        clear();
+        bookSeatDirectly(choice);
+        break;
+    case 'R':
+        // Return to event list
+        clear();
+        viewEventDetails(); // Recursive call to show list again
+        break;
+    case 'M':
+    default:
+        // Return to main menu
+        clear();
+        break;
+    }
 }
 
 void addEvent()
@@ -1278,13 +1440,13 @@ void adminViewAllEvents()
             events[eventCount - 1][sizeof(events[eventCount - 1]) - 1] = '\0';
             char eventBuf[200];
             snprintf(eventBuf, sizeof(eventBuf), "%d. %s", eventCount, name);
-            printUnifiedBlock(eventBuf);
+            printUnifiedBlockLeft(eventBuf);
         }
     }
     fclose(file);
     char returnBuf[100];
     snprintf(returnBuf, sizeof(returnBuf), "%d. Return to admin menu", eventCount + 1);
-    printUnifiedBlock(returnBuf);
+    printUnifiedBlockLeft(returnBuf);
     
     // Second pass - actually print with proper alignment
     resetUnifiedBlock();
@@ -1301,12 +1463,12 @@ void adminViewAllEvents()
                 eventCount++;
                 char eventBuf[200];
                 snprintf(eventBuf, sizeof(eventBuf), "%d. %s", eventCount, name);
-                printUnifiedBlock(eventBuf);
+                printUnifiedBlockLeft(eventBuf);
             }
         }
         fclose(file);
         snprintf(returnBuf, sizeof(returnBuf), "%d. Return to admin menu", eventCount + 1);
-        printUnifiedBlock(returnBuf);
+        printUnifiedBlockLeft(returnBuf);
     }
 
     if (eventCount == 0)
@@ -1477,10 +1639,6 @@ void viewAllUsers()
         return;
     }
 
-    printCentered("--- All Registered Users ---");
-    printCentered("Ticket Code | Name");
-    printCentered("---------------------------");
-
     char line[200];
     int ticketCode;
     char name[100];
@@ -1499,16 +1657,21 @@ void viewAllUsers()
     }
     fclose(file);
     
-    // Now display with proper vertical alignment
+    printCentered("--- All Registered Users ---");
+    
+    // Use unified block for consistent alignment of header and data
     resetUnifiedBlock();
+    printUnifiedBlockLeft("Ticket Code | Name");
+    printUnifiedBlockLeft("---------------------------");
+    
+    // First pass: collect all user data for alignment calculation
     for (int i = 0; i < userCount; i++)
     {
-        // For the first pass, just collect string lengths
         if (sscanf(users[i], "%d,%99[^\n]", &ticketCode, name) == 2)
         {
             char buf[200];
             snprintf(buf, sizeof(buf), "    %04d    | %s", ticketCode, name);
-            printUnifiedBlock(buf);
+            printUnifiedBlockLeft(buf);
         }
     }
     
@@ -1516,17 +1679,24 @@ void viewAllUsers()
     resetUnifiedBlock();
     unified_blockFirstCall = 0; // Switch to printing mode
     
+    // Print header again with proper alignment
+    printUnifiedBlockLeft("Ticket Code | Name");
+    printUnifiedBlockLeft("---------------------------");
+    
+    // Print user data with proper alignment
     for (int i = 0; i < userCount; i++)
     {
         if (sscanf(users[i], "%d,%99[^\n]", &ticketCode, name) == 2)
         {
             char buf[200];
             snprintf(buf, sizeof(buf), "    %04d    | %s", ticketCode, name);
-            printUnifiedBlock(buf);
+            printUnifiedBlockLeft(buf);
         }
     }
     
-    printCentered("---------------------------");
+    // Print bottom border and total count with centered alignment
+    printUnifiedBlockLeft("---------------------------");
+    
     char totalMsg[50];
     snprintf(totalMsg, sizeof(totalMsg), "Total registered users: %d", userCount);
     printCentered(totalMsg);
@@ -1538,18 +1708,54 @@ void viewAllUsers()
 }
 
 /* ===================== Booking Management Functions ===================== */
+
+/**
+ * Helper function to get event name by event ID
+ * Returns the event name or "Unknown Event" if not found
+ */
+char* getEventNameByID(int eventID)
+{
+    FILE *file = fopen("events.txt", "r");
+    if (file == NULL)
+    {
+        static char defaultName[] = "Unknown Event";
+        return defaultName;
+    }
+
+    char line[300], name[100], venue[100], date[20], time[20];
+    int seatCapacity;
+    int currentEventID = 1;
+    static char eventName[100]; // Static to persist after function returns
+
+    while (fgets(line, sizeof(line), file))
+    {
+        if (sscanf(line, "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity) == 5)
+        {
+            if (currentEventID == eventID)
+            {
+                fclose(file);
+                strcpy(eventName, name); // Copy to static variable
+                return eventName;
+            }
+            currentEventID++;
+        }
+    }
+    
+    fclose(file);
+    strcpy(eventName, "Unknown Event"); // Event ID not found
+    return eventName;
+}
+
 void viewAllBookings()
 {
     FILE *file = fopen(BOOKINGS_FILE, "r");
     if (file == NULL)
     {
         printCentered("No bookings found.");
+        printCentered("Press any key to continue...");
+        getch();
         return;
     }
-
-    printCentered("--- All Bookings ---");
-    printCentered("Event ID | Name");
-    printCentered("-------------------");
 
     char line[200];
     int eventID;
@@ -1569,16 +1775,30 @@ void viewAllBookings()
     }
     fclose(file);
     
-    // Now display with proper vertical alignment
+    if (bookingCount == 0)
+    {
+        printCentered("No bookings found.");
+        printCentered("Press any key to continue...");
+        getch();
+        return;
+    }
+    
+    printCentered("--- All Bookings ---");
+    
+    // Use unified block for consistent alignment of header and data
     resetUnifiedBlock();
+    printUnifiedBlockLeft("Event Name | User Name");
+    printUnifiedBlockLeft("---------------------------");
+    
+    // First pass: collect all booking data for alignment calculation
     for (int i = 0; i < bookingCount; i++)
     {
-        // For the first pass, just collect string lengths
         if (sscanf(bookings[i], "%d %[^\n]", &eventID, name) == 2)
         {
-            char buf[200];
-            snprintf(buf, sizeof(buf), "%8d | %s", eventID, name);
-            printUnifiedBlock(buf);
+            char *eventName = getEventNameByID(eventID);
+            char buf[300];
+            snprintf(buf, sizeof(buf), "%s | %s", eventName, name);
+            printUnifiedBlockLeft(buf);
         }
     }
     
@@ -1586,17 +1806,24 @@ void viewAllBookings()
     resetUnifiedBlock();
     unified_blockFirstCall = 0; // Switch to printing mode
     
+    // Print header again with proper alignment
+    printUnifiedBlockLeft("Event Name | User Name");
+    printUnifiedBlockLeft("---------------------------");
+    
+    // Print booking data with proper alignment
     for (int i = 0; i < bookingCount; i++)
     {
         if (sscanf(bookings[i], "%d %[^\n]", &eventID, name) == 2)
         {
-            char buf[200];
-            snprintf(buf, sizeof(buf), "%8d | %s", eventID, name);
-            printUnifiedBlock(buf);
+            char *eventName = getEventNameByID(eventID);
+            char buf[300];
+            snprintf(buf, sizeof(buf), "%s | %s", eventName, name);
+            printUnifiedBlockLeft(buf);
         }
     }
     
-    printCentered("-------------------");
+    // Print bottom border with unified block alignment
+    printUnifiedBlockLeft("---------------------------");
 
     // Add prompt to continue
     char continueBuf[10];
@@ -1606,17 +1833,161 @@ void viewAllBookings()
 
 void bookSeat()
 {
-    char name[100];
     int eventID;
 
     printCentered("-- Book a Seat --");
+    
+    // Check if user is logged in
+    if (strlen(loggedInUserName) == 0)
+    {
+        printCentered("Error: You must be logged in to book a seat.");
+        printCentered("Press any key to continue...");
+        getch();
+        return;
+    }
+    
     // Check if there are any events
     FILE *file = fopen("events.txt", "r");
     if (file == NULL)
     {
         printCentered("No events found.");
+        printCentered("Press any key to continue...");
+        getch();
         return;
     }
+    
+    // Count and display events
+    char line[300], eventName[100], venue[100], date[20], time[20];
+    int seatCapacity;
+    int eventCount = 0;
+    char events[50][300]; // Store up to 50 events
+
+    printCentered("-- Available Events --");
+    
+    // First pass - collect all event strings
+    resetUnifiedBlock();
+    while (fgets(line, sizeof(line), file))
+    {
+        if (sscanf(line, "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", eventName, venue, date, time, &seatCapacity) == 5)
+        {
+            eventCount++;
+            snprintf(events[eventCount - 1], sizeof(events[eventCount - 1]), "%s|%s|%s|%s|%d", eventName, venue, date, time, seatCapacity);
+            char buf[200];
+            snprintf(buf, sizeof(buf), "%d. %s", eventCount, eventName);
+            printUnifiedBlockLeft(buf);
+        }
+    }
+    fclose(file);
+    
+    if (eventCount == 0)
+    {
+        printCentered("No events found.");
+        printCentered("Press any key to continue...");
+        getch();
+        return;
+    }
+    
+    char buf[100];
+    snprintf(buf, sizeof(buf), "%d. Return to main menu", eventCount + 1);
+    printUnifiedBlockLeft(buf);
+    
+    // Second pass - actually print with proper alignment
+    resetUnifiedBlock();
+    unified_blockFirstCall = 0;  // Turn off first_call flag to trigger printing
+    
+    // Print the event list again with proper alignment
+    for (int i = 0; i < eventCount; i++) {
+        char name[100], venue[100], date[20], time[20];
+        int seatCapacity;
+        if (sscanf(events[i], "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity) == 5) {
+            char buf[200];
+            snprintf(buf, sizeof(buf), "%d. %s", i + 1, name);
+            printUnifiedBlockLeft(buf);
+        }
+    }
+    
+    // Print the return option
+    snprintf(buf, sizeof(buf), "%d. Return to main menu", eventCount + 1);
+    printUnifiedBlockLeft(buf);
+
+    // Get event ID to book
+    char promptBuf[100];
+    snprintf(promptBuf, sizeof(promptBuf), "Enter event ID to book: ");
+    char buf2[16];
+    inputCentered(promptBuf, buf2, sizeof(buf2));
+    if (sscanf(buf2, "%d", &eventID) != 1)
+    {
+        printCentered("Invalid input for Event ID.");
+        printCentered("Press any key to continue...");
+        getch();
+        return;
+    }
+
+    if (eventID < 1 || eventID > eventCount + 1)
+    {
+        printCentered("Invalid Event ID");
+        printCentered("Press any key to continue...");
+        getch();
+        return;
+    }
+    
+    if (eventID == eventCount + 1)
+    {
+        clear(); // Return to main menu
+        return;
+    }
+
+    // Use the logged-in user's name automatically (no need to ask again)
+    // Save the booking
+    saveBooking(eventID, loggedInUserName);
+
+    // Show confirmation with booking details
+    clear();
+    printCentered("--- Booking Confirmation ---");
+    printCentered("");
+    snprintf(buf, sizeof(buf), "Seat booked successfully for %s", loggedInUserName);
+    printCentered(buf);
+    snprintf(buf, sizeof(buf), "Event ID: %d", eventID);
+    printCentered(buf);
+    
+    // Show event name from the stored events
+    sscanf(events[eventID - 1], "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", eventName, venue, date, time, &seatCapacity);
+    snprintf(buf, sizeof(buf), "Event: %s", eventName);
+    printCentered(buf);
+    printCentered("");
+
+    // Add prompt to continue
+    char continueBuf[10];
+    inputCentered("Press Enter to continue...", continueBuf, sizeof(continueBuf));
+    clear(); // Clear screen after booking confirmation
+}
+
+/**
+ * Book a seat directly with given event ID
+ * This function is called from viewEventDetails to streamline booking
+ */
+void bookSeatDirectly(int eventID)
+{
+    // Check if user is logged in
+    if (strlen(loggedInUserName) == 0)
+    {
+        printCentered("Error: You must be logged in to book a seat.");
+        printCentered("Press any key to continue...");
+        getch();
+        return;
+    }
+
+    // Validate event ID exists
+    FILE *file = fopen("events.txt", "r");
+    if (file == NULL)
+    {
+        printCentered("No events found.");
+        printCentered("Press any key to continue...");
+        getch();
+        return;
+    }
+    
+    // Count total events to validate eventID
     int eventCount = 0;
     char line[300];
     while (fgets(line, sizeof(line), file))
@@ -1624,37 +1995,34 @@ void bookSeat()
         eventCount++;
     }
     fclose(file);
-    if (eventCount == 0)
-    {
-        printCentered("No events found.");
-        return;
-    }
-
-    viewEvents();
-    char buf[100];
-    snprintf(buf, sizeof(buf), "Enter Event ID to book (1-%d): ", eventCount);
-    char buf2[16];
-    inputCentered(buf, buf2, sizeof(buf2));
-    if (sscanf(buf2, "%d", &eventID) != 1)
-    {
-        printCentered("Invalid input for Event ID.");
-        return;
-    }
-
+    
     if (eventID < 1 || eventID > eventCount)
     {
         printCentered("Invalid Event ID");
+        printCentered("Press any key to continue...");
+        getch();
         return;
     }
 
-    while (getchar() != '\n')
-        ;
-    inputCentered("Enter your name: ", name, sizeof(name));
+    printCentered("-- Book a Seat --");
+    printCentered("");
+    
+    // Display confirmation message showing the logged-in user
+    char userMsg[200];
+    snprintf(userMsg, sizeof(userMsg), "Booking seat for: %s", loggedInUserName);
+    printCentered(userMsg);
+    printCentered("");
 
-    saveBooking(eventID, name);
+    // Save the booking using the logged-in user's name
+    saveBooking(eventID, loggedInUserName);
 
-    snprintf(buf, sizeof(buf), "Seat booked successfully for %s at event ID %d.", name, eventID);
+    // Show confirmation
+    char buf[200];
+    snprintf(buf, sizeof(buf), "Seat booked successfully for %s at event ID %d.", loggedInUserName, eventID);
+    printCentered("");
+    printCentered("--- Booking Confirmation ---");
     printCentered(buf);
+    printCentered("");
 
     // Add prompt to continue
     char continueBuf[10];
@@ -1664,23 +2032,37 @@ void bookSeat()
 
 void cancelBooking()
 {
-    char name[100];
     int eventID;
 
+    // Check if user is logged in
+    if (strlen(loggedInUserName) == 0)
+    {
+        printCentered("Error: You must be logged in to cancel a booking.");
+        printCentered("Press any key to continue...");
+        getch();
+        return;
+    }
+
     printCentered("-- Cancel Booking --");
-    while (getchar() != '\n')
-        ;
-    inputCentered("Enter your name: ", name, sizeof(name));
+    
+    // Display confirmation message showing the logged-in user
+    char userMsg[200];
+    snprintf(userMsg, sizeof(userMsg), "Canceling booking for: %s", loggedInUserName);
+    printCentered(userMsg);
+    printCentered("");
 
     char buf[16];
     inputCentered("Enter Event ID to cancel: ", buf, sizeof(buf));
     if (sscanf(buf, "%d", &eventID) != 1)
     {
         printCentered("Invalid input for Event ID.");
+        printCentered("Press any key to continue...");
+        getch();
         return;
     }
 
-    removeBooking(eventID, name);
+    // Use the logged-in user's name for cancellation
+    removeBooking(eventID, loggedInUserName);
 
     // Add prompt to continue
     char continueBuf[10];

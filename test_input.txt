@@ -1,3 +1,0 @@
-admin
-strongpassword
-0
