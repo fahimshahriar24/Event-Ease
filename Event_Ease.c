@@ -1,3 +1,13 @@
+/*
+ * Event-Ease: Console-based Event Management System
+ * 
+ * Features:
+ * - User registration and authentication with unique ticket codes
+ * - Event viewing and seat booking
+ * - Admin panel for event and user management
+ * - Persistent data storage in text files
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,21 +16,24 @@
 #include <time.h>
 #include <ctype.h>
 
+
 #define BOOKINGS_FILE "bookings.txt"
 #define USER_INFO_FILE "user_info.txt"
 
-// Global variable to store the logged-in user's name
-char loggedInUserName[100] = "";
+char loggedInUserName[100] = "";  // Stores currently logged-in user's name
 
-/* ===================== Function Declarations ===================== */
-// UI and Display Functions
+/*
+ * ========================= FUNCTION DECLARATIONS =========================
+ */
+
+// User Interface
 void clear();
 void welcomePage();
 void dashboardDesign();
 void printCentered(const char *str);
 void inputCentered(const char *prompt, char *buffer, int size);
 
-// New unified positioning system
+// Unified positioning system for consistent UI alignment
 int getConsoleWidth();
 int calculateCenterPosition(int contentWidth);
 void printUnified(const char *str);
@@ -29,7 +42,7 @@ void inputUnifiedBlock(const char *prompt, char *buffer, int size);
 void printUnifiedBlockLeft(const char *str);
 void resetUnifiedBlock();
 
-// Landing Page and Authentication Functions
+// Authentication and user management
 void landingPage();
 void newUserRegistration();
 void existingUserLogin();
@@ -40,17 +53,17 @@ int isNameExists(const char *name);
 void saveUserInfo(int ticketCode, const char *name);
 int validateUserLogin(const char *name, int ticketCode);
 
-// Core Navigation Functions
+// Main navigation dashboards
 void userDashboard();
 void adminDashboard();
 
-// Event Management Functions
+// Event management
 void viewEvents();
 void addEvent();
 void adminViewAllEvents();
 void viewAllUsers();
 
-// Booking Management Functions
+// Booking system
 void bookSeat();
 void bookSeatDirectly(int eventID);
 void cancelBooking();
@@ -60,19 +73,21 @@ void viewAllBookings();
 void viewEventDetails();
 char* getEventNameByID(int eventID);
 
-/* ===================== Main Function ===================== */
+/*
+ * ========================= MAIN FUNCTION =========================
+ */
 int main()
 {
     system("chcp 65001");
-    
-    // Initialize random seed for ticket code generation
-    srand((unsigned int)time(NULL));
-    
+    srand((unsigned int)time(NULL));  // Initialize random seed for ticket generation
     landingPage();
     return 0;
 }
 
-/* ===================== UI Functions ===================== */
+/*
+ * ========================= USER INTERFACE =========================
+ */
+
 void clear()
 {
     system("cls");
@@ -103,7 +118,6 @@ void inputCentered(const char *prompt, char *buffer, int size)
     SetConsoleCursorPosition(hConsole, pos);
     printf("%s", prompt);
     fflush(stdout);
-    // Move cursor right after prompt
     pos.X += promptLen;
     SetConsoleCursorPosition(hConsole, pos);
     fgets(buffer, size, stdin);
@@ -155,13 +169,11 @@ void welcomePage()
     GetConsoleScreenBufferInfo(hConsole, &csbi);
     WORD originalAttrs = csbi.wAttributes;
 
-    // Set light green color
     SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
 
-    // Optimized rendering loop
     for (int i = 0; i < 35; i++) {
         for (const char *p = art[i]; *p; p++) {
-            putchar(*p); putchar(*p); // stretch horizontally
+            putchar(*p); putchar(*p);
             fflush(stdout); Sleep(0);
         }
         putchar('\n');
@@ -176,7 +188,6 @@ void dashboardDesign()
     CONSOLE_SCREEN_BUFFER_INFO ci;
     GetConsoleScreenBufferInfo(h, &ci);
 
-    // Cyan = FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY
     SetConsoleTextAttribute(h, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
     const char *art[] = {
@@ -198,28 +209,24 @@ void dashboardDesign()
     SetConsoleTextAttribute(h, ci.wAttributes);
 }
 
-/* ===================== Unified Positioning System ===================== */
+/*
+ * ========================= UNIFIED POSITIONING SYSTEM =========================
+ * Ensures consistent alignment across all UI elements
+ */
 
-// Global variables for unified positioning
 static int unified_blockMaxLen = 0;
 static int unified_blockStartPos = -1;
 static int unified_blockFirstCall = 1;
 
-/**
- * Get current console width
- */
 int getConsoleWidth()
 {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     if (GetConsoleScreenBufferInfo(hConsole, &csbi))
         return csbi.srWindow.Right - csbi.srWindow.Left + 1;
-    return 80; // default width
+    return 80;
 }
 
-/**
- * Calculate center position for given content width
- */
 int calculateCenterPosition(int contentWidth)
 {
     int consoleWidth = getConsoleWidth();
@@ -227,9 +234,6 @@ int calculateCenterPosition(int contentWidth)
     return (centerPos < 0) ? 0 : centerPos;
 }
 
-/**
- * Print text centered on console
- */
 void printUnified(const char *str)
 {
     int len = (int)strlen(str);
@@ -240,9 +244,6 @@ void printUnified(const char *str)
     printf("%s\n", str);
 }
 
-/**
- * Input with unified positioning (matches printUnified alignment)
- */
 void inputUnified(const char *prompt, char *buffer, int size)
 {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -253,7 +254,6 @@ void inputUnified(const char *prompt, char *buffer, int size)
     int totalLen = promptLen + size;
     int pad = calculateCenterPosition(totalLen);
     
-    // Position cursor at calculated center position
     COORD pos = csbi.dwCursorPosition;
     pos.X = pad;
     SetConsoleCursorPosition(hConsole, pos);
@@ -261,7 +261,6 @@ void inputUnified(const char *prompt, char *buffer, int size)
     printf("%s", prompt);
     fflush(stdout);
     
-    // Move cursor right after prompt
     pos.X += promptLen;
     SetConsoleCursorPosition(hConsole, pos);
     
@@ -271,25 +270,19 @@ void inputUnified(const char *prompt, char *buffer, int size)
         buffer[len - 1] = '\0';
 }
 
-/**
- * Input function that aligns with unified block positioning
- */
 void inputUnifiedBlock(const char *prompt, char *buffer, int size)
 {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     GetConsoleScreenBufferInfo(hConsole, &csbi);
     
-    // Use the same positioning as unified block
     int promptLen = (int)strlen(prompt);
-    int pad = unified_blockStartPos; // Use the same position as the block
+    int pad = unified_blockStartPos;
     
     if (pad == -1) {
-        // If block position not set, calculate manually
         pad = calculateCenterPosition(promptLen + size);
     }
     
-    // Position cursor at the block's starting position
     COORD pos = csbi.dwCursorPosition;
     pos.X = pad;
     SetConsoleCursorPosition(hConsole, pos);
@@ -297,7 +290,6 @@ void inputUnifiedBlock(const char *prompt, char *buffer, int size)
     printf("%s", prompt);
     fflush(stdout);
     
-    // Move cursor right after prompt
     pos.X += promptLen;
     SetConsoleCursorPosition(hConsole, pos);
     
@@ -307,9 +299,6 @@ void inputUnifiedBlock(const char *prompt, char *buffer, int size)
         buffer[len - 1] = '\0';
 }
 
-/**
- * Reset unified block formatting
- */
 void resetUnifiedBlock()
 {
     unified_blockMaxLen = 0;
@@ -317,41 +306,32 @@ void resetUnifiedBlock()
     unified_blockFirstCall = 1;
 }
 
-/**
- * Print text in a unified left-aligned block (centered as a group)
- */
 void printUnifiedBlockLeft(const char *str)
 {
     int currentLen = (int)strlen(str);
     
-    // First call after reset - measure all strings
     if (unified_blockFirstCall) {
-        // Track all strings to find the maximum length
         if (currentLen > unified_blockMaxLen) {
             unified_blockMaxLen = currentLen;
         }
-        return; // Don't print during measuring phase
+        return;
     }
     
-    // Calculate the starting position (centered block) - only once
     if (unified_blockStartPos == -1) {
         unified_blockStartPos = calculateCenterPosition(unified_blockMaxLen);
     }
     
-    // Print spaces to the starting position
     for (int i = 0; i < unified_blockStartPos; i++) {
         putchar(' ');
     }
     
-    // Print the string
     printf("%s\n", str);
 }
 
-/* ===================== Landing Page and Authentication Functions ===================== */
-
-/**
- * Main landing page - displays welcome screen and user options
+/*
+ * ========================= AUTHENTICATION & LANDING PAGE =========================
  */
+
 void landingPage()
 {
     int choice;
@@ -361,7 +341,6 @@ void landingPage()
         clear();
         welcomePage();
         
-        // Use unified block for ALL elements to ensure perfect alignment
         resetUnifiedBlock();
         printUnifiedBlockLeft("Welcome to Event-Ease!");
         printUnifiedBlockLeft("=====================");
@@ -371,7 +350,6 @@ void landingPage()
         printUnifiedBlockLeft("3. Admin Login");
         printUnifiedBlockLeft("0. Exit");
         
-        // Second pass to actually print with alignment
         resetUnifiedBlock();
         unified_blockFirstCall = 0;
         
@@ -434,30 +412,23 @@ void landingPage()
     }
 }
 
-/**
- * New user registration - generates unique ticket code and saves user info
- */
 void newUserRegistration()
 {
     char name[100];
     int ticketCode;
     
-    // Use unified block for header to ensure alignment with content
     resetUnifiedBlock();
     printUnifiedBlockLeft("=== New User Registration ===");
     printUnifiedBlockLeft("");
     printUnifiedBlockLeft("Enter your name: ");
     
-    // Calculate the unified block position first
     resetUnifiedBlock();
     unified_blockFirstCall = 0;
     printUnifiedBlockLeft("=== New User Registration ===");
     printUnifiedBlockLeft("");
     
-    // Get user name with validation
     while (1)
     {
-        // Position the input at the same location as the block
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         CONSOLE_SCREEN_BUFFER_INFO csbi;
         GetConsoleScreenBufferInfo(hConsole, &csbi);
@@ -576,10 +547,7 @@ void newUserRegistration()
         return;
     }
     
-    // Save user information
     saveUserInfo(ticketCode, name);
-    
-    // Store the newly registered user's name for immediate use
     strcpy(loggedInUserName, name);
     
     // Display registration success using unified block system
@@ -698,13 +666,10 @@ void existingUserLogin()
         return;
     }
     
-    // Validate user login
     if (validateUserLogin(name, ticketCode))
     {
-        // Store the logged-in user's name for future use
         strcpy(loggedInUserName, name);
         
-        // Use unified block for success messages
         resetUnifiedBlock();
         printUnifiedBlockLeft("Login successful!");
         printUnifiedBlockLeft("Welcome back!");
@@ -791,10 +756,8 @@ void adminLogin()
     if (len > 0 && password[len - 1] == '\n')
         password[len - 1] = '\0';
     
-    // Check hardcoded admin credentials
     if (strcmp(username, "admin") == 0 && strcmp(password, "password") == 0)
     {
-        // Use unified block for success messages
         resetUnifiedBlock();
         printUnifiedBlockLeft("Admin login successful!");
         printUnifiedBlockLeft("Access granted to admin panel.");
@@ -905,8 +868,7 @@ int isNameExists(const char *name)
     {
         if (sscanf(line, "%d,%99[^\n]", &existingTicket, existingName) == 2)
         {
-            // Case-insensitive comparison for names
-            if (strcasecmp(existingName, name) == 0)
+            if (_stricmp(existingName, name) == 0)
             {
                 fclose(file);
                 return 1; // Name exists
@@ -967,11 +929,10 @@ int validateUserLogin(const char *name, int ticketCode)
     return 0; // No match found
 }
 
-/* ===================== Core Navigation Functions ===================== */
-
-/**
- * User dashboard - main menu for registered users
+/*
+ * ========================= NAVIGATION DASHBOARDS =========================
  */
+
 void userDashboard()
 {
     int choice;
@@ -980,7 +941,6 @@ void userDashboard()
     {
         dashboardDesign();
         
-        // Use unified block for menu items - first pass to collect strings
         resetUnifiedBlock();
         printUnifiedBlockLeft("1. View Event Details");
         printUnifiedBlockLeft("2. Book Seat");
@@ -989,11 +949,9 @@ void userDashboard()
         printUnifiedBlockLeft("5. Logout");
         printUnifiedBlockLeft("0. Exit");
         
-        // Second pass to actually print with alignment
         resetUnifiedBlock();
-        unified_blockFirstCall = 0;     // Turn off first_call flag to trigger printing
+        unified_blockFirstCall = 0;
         
-        // Print the same strings again, now they'll be properly aligned
         printUnifiedBlockLeft("1. View Event Details");
         printUnifiedBlockLeft("2. Book Seat");
         printUnifiedBlockLeft("3. Cancel Booking");
@@ -1031,10 +989,9 @@ void userDashboard()
             break;
         case 5:
             clear();
-            // Clear the logged-in user name when logging out
             strcpy(loggedInUserName, "");
             printCentered("Logging out...");
-            return; // Return to landing page
+            return;
         case 0:
             clear();
             printCentered("Thank you for using Event-Ease!");
@@ -1048,9 +1005,6 @@ void userDashboard()
     }
 }
 
-/**
- * Admin dashboard - main menu for administrators
- */
 void adminDashboard()
 {
     int choice;
@@ -1058,7 +1012,6 @@ void adminDashboard()
     {
         dashboardDesign();
         
-        // Use unified block for menu items - first pass to collect strings
         resetUnifiedBlock();
         printUnifiedBlockLeft("1. View all bookings");
         printUnifiedBlockLeft("2. Add Event");
@@ -1067,11 +1020,9 @@ void adminDashboard()
         printUnifiedBlockLeft("5. Logout");
         printUnifiedBlockLeft("0. Exit");
         
-        // Second pass to actually print with alignment
         resetUnifiedBlock();
-        unified_blockFirstCall = 0;     // Turn off first_call flag to trigger printing
+        unified_blockFirstCall = 0;
         
-        // Print the same strings again, now they'll be properly aligned
         printUnifiedBlockLeft("1. View all bookings");
         printUnifiedBlockLeft("2. Add Event");
         printUnifiedBlockLeft("3. View All Events");
@@ -1123,7 +1074,9 @@ void adminDashboard()
         }
     }
 }
-/* ===================== Event Management Functions ===================== */
+/*
+ * ========================= EVENT MANAGEMENT =========================
+ */
 void viewEvents()
 {
     FILE *file = fopen("events.txt", "r");
@@ -1707,11 +1660,12 @@ void viewAllUsers()
     clear(); // Clear screen after viewing users
 }
 
-/* ===================== Booking Management Functions ===================== */
+/*
+ * ========================= BOOKING SYSTEM =========================
+ */
 
 /**
- * Helper function to get event name by event ID
- * Returns the event name or "Unknown Event" if not found
+ * Helper function: Returns event name for given event ID
  */
 char* getEventNameByID(int eventID)
 {
@@ -1962,13 +1916,8 @@ void bookSeat()
     clear(); // Clear screen after booking confirmation
 }
 
-/**
- * Book a seat directly with given event ID
- * This function is called from viewEventDetails to streamline booking
- */
 void bookSeatDirectly(int eventID)
 {
-    // Check if user is logged in
     if (strlen(loggedInUserName) == 0)
     {
         printCentered("Error: You must be logged in to book a seat.");
