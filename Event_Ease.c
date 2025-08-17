@@ -158,7 +158,10 @@ void inputPasswordHidden(const char *prompt, char *buffer, int size)
         {
             buffer[i] = ch;
             i++;
-            printf("*"); // Display asterisk
+            printf("%c", ch); // Display actual character first
+            fflush(stdout);
+            Sleep(250); // Show character for 200 milliseconds
+            printf("\b*"); // Replace with asterisk
             fflush(stdout);
         }
     }
@@ -405,7 +408,10 @@ void inputPasswordUnified(char *buffer, int size)
         {
             buffer[i] = ch;
             i++;
-            printf("*"); // Display asterisk
+            printf("%c", ch); // Display actual character first
+            fflush(stdout);
+            Sleep(200); // Show character for 200 milliseconds
+            printf("\b*"); // Replace with asterisk
             fflush(stdout);
         }
     }
