@@ -14,7 +14,6 @@
 #include <windows.h>
 #include <conio.h>
 #include <time.h>
-#include <ctype.h>
 
 
 #define BOOKINGS_FILE "bookings.txt"
@@ -47,6 +46,8 @@ void landingPage();
 void newUserRegistration();
 void existingUserLogin();
 void adminLogin();
+void inputPasswordHidden(const char *prompt, char *buffer, int size);
+void inputPasswordUnified(char *buffer, int size);
 int generateUniqueTicketCode();
 int isTicketCodeExists(int ticketCode);
 int isNameExists(const char *name);
@@ -72,17 +73,6 @@ void removeBooking(int eventID, const char *name);
 void viewAllBookings();
 void viewEventDetails();
 char* getEventNameByID(int eventID);
-
-/*
- * ========================= MAIN FUNCTION =========================
- */
-int main()
-{
-    system("chcp 65001");
-    srand((unsigned int)time(NULL));  // Initialize random seed for ticket generation
-    landingPage();
-    return 0;
-}
 
 /*
  * ========================= USER INTERFACE =========================
@@ -124,6 +114,55 @@ void inputCentered(const char *prompt, char *buffer, int size)
     size_t len = strlen(buffer);
     if (len > 0 && buffer[len - 1] == '\n')
         buffer[len - 1] = '\0';
+}
+
+void inputPasswordHidden(const char *prompt, char *buffer, int size)
+{
+    int width = getConsoleWidth();
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    int promptLen = (int)strlen(prompt);
+    int pad = (width - promptLen) / 2;
+    if (pad < 0) pad = 0;
+    
+    // Position and display prompt
+    COORD pos = csbi.dwCursorPosition;
+    pos.X = pad;
+    SetConsoleCursorPosition(hConsole, pos);
+    printf("%s", prompt);
+    fflush(stdout);
+    
+    // Read password character by character
+    int i = 0;
+    char ch;
+    buffer[0] = '\0'; // Initialize buffer
+    
+    while (i < size - 1) // Leave space for null terminator
+    {
+        ch = getch(); // Get character without echo
+        
+        if (ch == '\r' || ch == '\n') // Enter key
+        {
+            break;
+        }
+        else if (ch == '\b' && i > 0) // Backspace
+        {
+            i--;
+            printf("\b \b"); // Erase last asterisk
+            fflush(stdout);
+        }
+        else if (ch != '\b') // Regular character
+        {
+            buffer[i] = ch;
+            i++;
+            printf("*"); // Display asterisk
+            fflush(stdout);
+        }
+    }
+    
+    buffer[i] = '\0'; // Null terminate
+    printf("\n"); // Move to next line
 }
 
 void welcomePage()
@@ -326,6 +365,51 @@ void printUnifiedBlockLeft(const char *str)
     }
     
     printf("%s\n", str);
+}
+
+void inputPasswordUnified(char *buffer, int size)
+{
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    
+    // Position cursor at unified block position
+    COORD pos = csbi.dwCursorPosition;
+    pos.X = unified_blockStartPos;
+    SetConsoleCursorPosition(hConsole, pos);
+    printf("Password: ");
+    fflush(stdout);
+    
+    // Read password character by character with hidden input
+    int i = 0;
+    char ch;
+    buffer[0] = '\0'; // Initialize buffer
+    
+    while (i < size - 1) // Leave space for null terminator
+    {
+        ch = getch(); // Get character without echo
+        
+        if (ch == '\r' || ch == '\n') // Enter key
+        {
+            break;
+        }
+        else if (ch == '\b' && i > 0) // Backspace
+        {
+            i--;
+            printf("\b \b"); // Erase last asterisk
+            fflush(stdout);
+        }
+        else if (ch != '\b') // Regular character
+        {
+            buffer[i] = ch;
+            i++;
+            printf("*"); // Display asterisk
+            fflush(stdout);
+        }
+    }
+    
+    buffer[i] = '\0'; // Null terminate
+    printf("\n"); // Move to next line
 }
 
 /*
@@ -685,6 +769,8 @@ void existingUserLogin()
         
         clear();
         userDashboard();
+        // After logout, user returns here and function ends normally
+        // This should return control to landingPage() main menu
     }
     else
     {
@@ -742,19 +828,8 @@ void adminLogin()
     if (len > 0 && username[len - 1] == '\n')
         username[len - 1] = '\0';
     
-    // Get password
-    GetConsoleScreenBufferInfo(hConsole, &csbi);
-    pos = csbi.dwCursorPosition;
-    pos.X = unified_blockStartPos;
-    SetConsoleCursorPosition(hConsole, pos);
-    printf("Password: ");
-    fflush(stdout);
-    pos.X += strlen("Password: ");
-    SetConsoleCursorPosition(hConsole, pos);
-    fgets(password, sizeof(password), stdin);
-    len = strlen(password);
-    if (len > 0 && password[len - 1] == '\n')
-        password[len - 1] = '\0';
+    // Get password (hidden input)
+    inputPasswordUnified(password, sizeof(password));
     
     if (strcmp(username, "admin") == 0 && strcmp(password, "password") == 0)
     {
@@ -889,7 +964,8 @@ void saveUserInfo(int ticketCode, const char *name)
     FILE *file = fopen(USER_INFO_FILE, "a");
     if (file == NULL)
     {
-        printCentered("Error: Unable to save user information.");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("Error: Unable to save user information.");
         return;
     }
     
@@ -949,9 +1025,8 @@ void userDashboard()
         printUnifiedBlockLeft("5. Logout");
         printUnifiedBlockLeft("0. Exit");
         
-        resetUnifiedBlock();
+        // Second pass - actually print the menu
         unified_blockFirstCall = 0;
-        
         printUnifiedBlockLeft("1. View Event Details");
         printUnifiedBlockLeft("2. Book Seat");
         printUnifiedBlockLeft("3. Cancel Booking");
@@ -959,12 +1034,15 @@ void userDashboard()
         printUnifiedBlockLeft("5. Logout");
         printUnifiedBlockLeft("0. Exit");
         
+        // Get input using unified block positioning
         char buf[16];
-        inputCentered("Select an option: ", buf, sizeof(buf));
+        inputUnifiedBlock("Select an option: ", buf, sizeof(buf));
+            
         if (sscanf(buf, "%d", &choice) != 1)
         {
-            printCentered("Invalid input. Please enter a number.");
-            printCentered("Press any key to continue...");
+            resetUnifiedBlock();
+            printUnifiedBlockLeft("Invalid input. Please enter a number.");
+            printUnifiedBlockLeft("Press any key to continue...");
             getch();
             continue;
         }
@@ -990,16 +1068,27 @@ void userDashboard()
         case 5:
             clear();
             strcpy(loggedInUserName, "");
-            printCentered("Logging out...");
+            resetUnifiedBlock();
+            printUnifiedBlockLeft("Successfully logged out!");
+            printUnifiedBlockLeft("Returning to main menu...");
+            unified_blockFirstCall = 0;
+            printUnifiedBlockLeft("Successfully logged out!");
+            printUnifiedBlockLeft("Returning to main menu...");
+            Sleep(1500); // Show message for 1.5 seconds instead of waiting for key press
+            clear(); // Clear screen before returning to main menu
             return;
         case 0:
             clear();
-            printCentered("Thank you for using Event-Ease!");
+            resetUnifiedBlock();
+            printUnifiedBlockLeft("Thank you for using Event-Ease!");
+            printUnifiedBlockLeft("Press any key to exit...");
+            getch();
             exit(0);
         default:
             clear();
-            printCentered("Invalid choice. Please select again.");
-            printCentered("Press any key to continue...");
+            resetUnifiedBlock();
+            printUnifiedBlockLeft("Invalid choice. Please select again.");
+            printUnifiedBlockLeft("Press any key to continue...");
             getch();
         }
     }
@@ -1020,9 +1109,8 @@ void adminDashboard()
         printUnifiedBlockLeft("5. Logout");
         printUnifiedBlockLeft("0. Exit");
         
-        resetUnifiedBlock();
+        // Second pass - actually print the menu
         unified_blockFirstCall = 0;
-        
         printUnifiedBlockLeft("1. View all bookings");
         printUnifiedBlockLeft("2. Add Event");
         printUnifiedBlockLeft("3. View All Events");
@@ -1030,12 +1118,15 @@ void adminDashboard()
         printUnifiedBlockLeft("5. Logout");
         printUnifiedBlockLeft("0. Exit");
         
+        // Get input using unified block positioning
         char buf[16];
-        inputCentered("Select an option: ", buf, sizeof(buf));
+        inputUnifiedBlock("Select an option: ", buf, sizeof(buf));
+            
         if (sscanf(buf, "%d", &choice) != 1)
         {
-            printCentered("Invalid input. Please enter a number.");
-            printCentered("Press any key to continue...");
+            resetUnifiedBlock();
+            printUnifiedBlockLeft("Invalid input. Please enter a number.");
+            printUnifiedBlockLeft("Press any key to continue...");
             getch();
             continue;
         }
@@ -1060,16 +1151,24 @@ void adminDashboard()
             break;
         case 5:
             clear();
-            printCentered("Logging out of admin panel...");
+            resetUnifiedBlock();
+            printUnifiedBlockLeft("Logging out of admin panel...");
+            unified_blockFirstCall = 0;
+            printUnifiedBlockLeft("Logging out of admin panel...");
+            Sleep(1500); // Show message for 1.5 seconds instead of waiting for key press
             return; // Return to landing page
         case 0:
             clear();
-            printCentered("Thank you for using Event-Ease!");
+            resetUnifiedBlock();
+            printUnifiedBlockLeft("Thank you for using Event-Ease!");
+            printUnifiedBlockLeft("Press any key to exit...");
+            getch();
             exit(0);
         default:
             clear();
-            printCentered("Invalid choice. Please select again.");
-            printCentered("Press any key to continue...");
+            resetUnifiedBlock();
+            printUnifiedBlockLeft("Invalid choice. Please select again.");
+            printUnifiedBlockLeft("Press any key to continue...");
             getch();
         }
     }
@@ -1082,7 +1181,8 @@ void viewEvents()
     FILE *file = fopen("events.txt", "r");
     if (file == NULL)
     {
-        printCentered("No events found.");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("No events found.");
         return;
     }
 
@@ -1091,10 +1191,11 @@ void viewEvents()
     int eventCount = 0;
     char events[50][300]; // Store up to 50 events
 
-    printCentered("-- Available Events --");
+    resetUnifiedBlock();
+    printUnifiedBlockLeft("=== Available Events ===");
+    printUnifiedBlockLeft("");
     
     // First pass - collect all event strings
-    resetUnifiedBlock();
     while (fgets(line, sizeof(line), file))
     {
         if (sscanf(line, "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity) == 5)
@@ -1107,28 +1208,10 @@ void viewEvents()
         }
     }
     fclose(file);
-    char buf[100];
-    snprintf(buf, sizeof(buf), "%d. Return to main menu", eventCount + 1);
-    printUnifiedBlockLeft(buf);
     
-    // Second pass - actually print with proper alignment
-    resetUnifiedBlock();
-    unified_blockFirstCall = 0;  // Turn off first_call flag to trigger printing
-    
-    // Print the event list again with proper alignment
-    for (int i = 0; i < eventCount; i++) {
-        char name[100], venue[100], date[20], time[20];
-        int seatCapacity;
-        if (sscanf(events[i], "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity) == 5) {
-            char buf[200];
-            snprintf(buf, sizeof(buf), "%d. %s", i + 1, name);
-            printUnifiedBlockLeft(buf);
-        }
-    }
-    
-    // Print the return option
-    snprintf(buf, sizeof(buf), "%d. Return to main menu", eventCount + 1);
-    printUnifiedBlockLeft(buf);
+    char returnBuf[100];
+    snprintf(returnBuf, sizeof(returnBuf), "%d. Return to main menu", eventCount + 1);
+    printUnifiedBlockLeft(returnBuf);
 
     if (eventCount == 0)
         return;
@@ -1137,15 +1220,17 @@ void viewEvents()
     char selectPrompt[100];
     snprintf(selectPrompt, sizeof(selectPrompt), "Select an event to view details or %d to return: ", eventCount + 1);
     char buf_input[16];
-    inputCentered(selectPrompt, buf_input, sizeof(buf_input));
+    inputUnifiedBlock(selectPrompt, buf_input, sizeof(buf_input));
     if (sscanf(buf_input, "%d", &choice) != 1)
     {
-        printCentered("Invalid input.");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("Invalid input.");
         return;
     }
     if (choice < 1 || choice > eventCount + 1)
     {
-        printCentered("Invalid choice.");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("Invalid choice.");
         return;
     }
     if (choice == eventCount + 1)
@@ -1155,24 +1240,28 @@ void viewEvents()
     }
 
     // Show details for selected event
+    clear();
     sscanf(events[choice - 1], "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity);
-    printCentered("\n--- Event Details ---");
+    
+    resetUnifiedBlock();
+    printUnifiedBlockLeft("=== Event Details ===");
+    printUnifiedBlockLeft("");
     
     char detail_buf[200];
     snprintf(detail_buf, sizeof(detail_buf), "Name: %s", name);
-    printCentered(detail_buf);
+    printUnifiedBlockLeft(detail_buf);
     snprintf(detail_buf, sizeof(detail_buf), "Venue: %s", venue);
-    printCentered(detail_buf);
+    printUnifiedBlockLeft(detail_buf);
     snprintf(detail_buf, sizeof(detail_buf), "Date (DD-MM-YYYY): %s", date);
-    printCentered(detail_buf);
+    printUnifiedBlockLeft(detail_buf);
     snprintf(detail_buf, sizeof(detail_buf), "Time: %s", time);
-    printCentered(detail_buf);
+    printUnifiedBlockLeft(detail_buf);
     snprintf(detail_buf, sizeof(detail_buf), "Seat Capacity: %d", seatCapacity);
-    printCentered(detail_buf);
+    printUnifiedBlockLeft(detail_buf);
 
     // Add prompt to continue
     char continueBuf[10];
-    inputCentered("Press Enter to continue...", continueBuf, sizeof(continueBuf));
+    inputUnifiedBlock("Press Enter to continue...", continueBuf, sizeof(continueBuf));
     clear(); // Clear screen after viewing event details
 }
 
@@ -1185,8 +1274,9 @@ void viewEventDetails()
     FILE *file = fopen("events.txt", "r");
     if (file == NULL)
     {
-        printCentered("No events found.");
-        printCentered("Press any key to continue...");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("No events found.");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
@@ -1196,10 +1286,12 @@ void viewEventDetails()
     int eventCount = 0;
     char events[50][300]; // Store up to 50 events
 
-    printCentered("-- Available Events --");
-    
-    // First pass - collect all event strings
+    // Use unified block system for consistency
     resetUnifiedBlock();
+    printUnifiedBlockLeft("=== Available Events ===");
+    printUnifiedBlockLeft("");
+    
+    // First pass - collect all events and measure them
     while (fgets(line, sizeof(line), file))
     {
         if (sscanf(line, "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity) == 5)
@@ -1215,21 +1307,22 @@ void viewEventDetails()
     
     if (eventCount == 0)
     {
-        printCentered("No events available.");
-        printCentered("Press any key to continue...");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("No events available.");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
     
-    char buf[100];
-    snprintf(buf, sizeof(buf), "%d. Return to main menu", eventCount + 1);
-    printUnifiedBlockLeft(buf);
+    char returnBuf[100];
+    snprintf(returnBuf, sizeof(returnBuf), "%d. Return to main menu", eventCount + 1);
+    printUnifiedBlockLeft(returnBuf);
     
-    // Second pass - actually print with proper alignment
+    // Now display with unified alignment
     resetUnifiedBlock();
-    unified_blockFirstCall = 0;  // Turn off first_call flag to trigger printing
-    
-    // Print the event list again with proper alignment
+    unified_blockFirstCall = 0;
+    printUnifiedBlockLeft("=== Available Events ===");
+    printUnifiedBlockLeft("");
     for (int i = 0; i < eventCount; i++) {
         char name[100], venue[100], date[20], time[20];
         int seatCapacity;
@@ -1241,26 +1334,29 @@ void viewEventDetails()
     }
     
     // Print the return option
-    snprintf(buf, sizeof(buf), "%d. Return to main menu", eventCount + 1);
-    printUnifiedBlockLeft(buf);
+    char returnBuf2[100];
+    snprintf(returnBuf2, sizeof(returnBuf2), "%d. Return to main menu", eventCount + 1);
+    printUnifiedBlockLeft(returnBuf2);
 
     // Get user's event selection
     int choice;
     char selectPrompt[100];
     snprintf(selectPrompt, sizeof(selectPrompt), "Enter event ID to view details: ");
     char buf_input[16];
-    inputCentered(selectPrompt, buf_input, sizeof(buf_input));
+    inputUnifiedBlock(selectPrompt, buf_input, sizeof(buf_input));
     if (sscanf(buf_input, "%d", &choice) != 1)
     {
-        printCentered("Invalid input.");
-        printCentered("Press any key to continue...");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("Invalid input.");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
     if (choice < 1 || choice > eventCount + 1)
     {
-        printCentered("Invalid choice.");
-        printCentered("Press any key to continue...");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("Invalid choice.");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
@@ -1273,37 +1369,40 @@ void viewEventDetails()
     // Show details for selected event
     clear();
     sscanf(events[choice - 1], "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity);
-    printCentered("--- Event Details ---");
-    printCentered("");
+    
+    resetUnifiedBlock();
+    printUnifiedBlockLeft("=== Event Details ===");
+    printUnifiedBlockLeft("");
     
     char detail_buf[200];
     snprintf(detail_buf, sizeof(detail_buf), "Name: %s", name);
-    printCentered(detail_buf);
+    printUnifiedBlockLeft(detail_buf);
     snprintf(detail_buf, sizeof(detail_buf), "Venue: %s", venue);
-    printCentered(detail_buf);
+    printUnifiedBlockLeft(detail_buf);
     snprintf(detail_buf, sizeof(detail_buf), "Date (DD-MM-YYYY): %s", date);
-    printCentered(detail_buf);
+    printUnifiedBlockLeft(detail_buf);
     snprintf(detail_buf, sizeof(detail_buf), "Time: %s", time);
-    printCentered(detail_buf);
+    printUnifiedBlockLeft(detail_buf);
     snprintf(detail_buf, sizeof(detail_buf), "Seat Capacity: %d", seatCapacity);
-    printCentered(detail_buf);
-    printCentered("");
+    printUnifiedBlockLeft(detail_buf);
+    printUnifiedBlockLeft("");
     
     // Show booking options
-    printCentered("[B] Book this event");
-    printCentered("[R] Return to list");
-    printCentered("[M] Main menu");
-    printCentered("");
+    printUnifiedBlockLeft("[B] Book this event");
+    printUnifiedBlockLeft("[R] Return to list");
+    printUnifiedBlockLeft("[M] Main menu");
+    printUnifiedBlockLeft("");
 
     // Get user's action choice
     char action;
     char actionPrompt[50] = "Choose an option (B/R/M): ";
     char actionBuf[16];
-    inputCentered(actionPrompt, actionBuf, sizeof(actionBuf));
+    inputUnifiedBlock(actionPrompt, actionBuf, sizeof(actionBuf));
     
     if (strlen(actionBuf) > 0)
     {
-        action = toupper(actionBuf[0]); // Convert to uppercase for easy comparison
+        action = (actionBuf[0] >= 'a' && actionBuf[0] <= 'z') ? 
+                 actionBuf[0] - 'a' + 'A' : actionBuf[0];
     }
     else
     {
@@ -1335,34 +1434,122 @@ void addEvent()
     char name[100], venue[100], date[20], time[20];
     int seatCapacity;
 
-    printCentered("-- Add New Event --");
-    resetUnifiedBlock(); // Reset the block formatting for prompts
-    inputCentered("Event Name: ", name, 40);
-    inputCentered("Venue: ", venue, 40);
-    inputCentered("Date (DD-MM-YYYY): ", date, sizeof(date));
-    inputCentered("Time (HH:MM): ", time, sizeof(time));
-
+    // Use unified block system for consistency
+    resetUnifiedBlock();
+    printUnifiedBlockLeft("=== Add New Event ===");
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("Event Name: ");
+    printUnifiedBlockLeft("Venue: ");
+    printUnifiedBlockLeft("Date (DD-MM-YYYY): ");
+    printUnifiedBlockLeft("Time (HH:MM): ");
+    printUnifiedBlockLeft("Seat Capacity: ");
+    
+    // Now get the actual input using unified positioning
+    resetUnifiedBlock();
+    unified_blockFirstCall = 0;
+    printUnifiedBlockLeft("=== Add New Event ===");
+    printUnifiedBlockLeft("");
+    
+    // Get event details with unified block positioning
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    
+    // Get event name
+    COORD pos = csbi.dwCursorPosition;
+    pos.X = unified_blockStartPos;
+    SetConsoleCursorPosition(hConsole, pos);
+    printf("Event Name: ");
+    fflush(stdout);
+    pos.X += strlen("Event Name: ");
+    SetConsoleCursorPosition(hConsole, pos);
+    fgets(name, sizeof(name), stdin);
+    size_t len = strlen(name);
+    if (len > 0 && name[len - 1] == '\n')
+        name[len - 1] = '\0';
+    
+    // Get venue
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    pos = csbi.dwCursorPosition;
+    pos.X = unified_blockStartPos;
+    SetConsoleCursorPosition(hConsole, pos);
+    printf("Venue: ");
+    fflush(stdout);
+    pos.X += strlen("Venue: ");
+    SetConsoleCursorPosition(hConsole, pos);
+    fgets(venue, sizeof(venue), stdin);
+    len = strlen(venue);
+    if (len > 0 && venue[len - 1] == '\n')
+        venue[len - 1] = '\0';
+    
+    // Get date
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    pos = csbi.dwCursorPosition;
+    pos.X = unified_blockStartPos;
+    SetConsoleCursorPosition(hConsole, pos);
+    printf("Date (DD-MM-YYYY): ");
+    fflush(stdout);
+    pos.X += strlen("Date (DD-MM-YYYY): ");
+    SetConsoleCursorPosition(hConsole, pos);
+    fgets(date, sizeof(date), stdin);
+    len = strlen(date);
+    if (len > 0 && date[len - 1] == '\n')
+        date[len - 1] = '\0';
+    
+    // Get time
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    pos = csbi.dwCursorPosition;
+    pos.X = unified_blockStartPos;
+    SetConsoleCursorPosition(hConsole, pos);
+    printf("Time (HH:MM): ");
+    fflush(stdout);
+    pos.X += strlen("Time (HH:MM): ");
+    SetConsoleCursorPosition(hConsole, pos);
+    fgets(time, sizeof(time), stdin);
+    len = strlen(time);
+    if (len > 0 && time[len - 1] == '\n')
+        time[len - 1] = '\0';
+    
+    // Get seat capacity
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    pos = csbi.dwCursorPosition;
+    pos.X = unified_blockStartPos;
+    SetConsoleCursorPosition(hConsole, pos);
+    printf("Seat Capacity: ");
+    fflush(stdout);
+    pos.X += strlen("Seat Capacity: ");
+    SetConsoleCursorPosition(hConsole, pos);
     char buf[16];
-    inputCentered("Seat Capacity: ", buf, sizeof(buf));
+    fgets(buf, sizeof(buf), stdin);
+    len = strlen(buf);
+    if (len > 0 && buf[len - 1] == '\n')
+        buf[len - 1] = '\0';
+    
     if (sscanf(buf, "%d", &seatCapacity) != 1)
     {
-        printCentered("Invalid input for seat capacity.");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("Invalid input for seat capacity.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        getch();
         return;
     }
 
     FILE *file = fopen("events.txt", "a");
     if (file == NULL)
     {
-        printCentered("Error opening events file!");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("Error opening events file!");
+        printUnifiedBlockLeft("Press any key to continue...");
+        getch();
         return;
     }
     fprintf(file, "%s|%s|%s|%s|%d\n", name, venue, date, time, seatCapacity);
     fclose(file);
-    printCentered("Event added successfully!");
-
-    // Add prompt to continue
-    char continueBuf[10];
-    inputCentered("Press Enter to continue...", continueBuf, sizeof(continueBuf));
+    
+    resetUnifiedBlock();
+    printUnifiedBlockLeft("Event added successfully!");
+    printUnifiedBlockLeft("Press any key to continue...");
+    getch();
     clear(); // Clear screen after adding event
 }
 
@@ -1371,7 +1558,8 @@ void adminViewAllEvents()
     FILE *file = fopen("events.txt", "r");
     if (file == NULL)
     {
-        printCentered("No events found.");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("No events found.");
         return;
     }
 
@@ -1380,7 +1568,9 @@ void adminViewAllEvents()
     int eventCount = 0;
     char events[50][300]; // Store up to 50 events
 
-    printCentered("-- All Events --");
+    resetUnifiedBlock();
+    printUnifiedBlockLeft("=== All Events ===");
+    printUnifiedBlockLeft("");
     
     // Use unified block for event list
     resetUnifiedBlock();
@@ -1431,15 +1621,21 @@ void adminViewAllEvents()
     char selectPrompt[100];
     snprintf(selectPrompt, sizeof(selectPrompt), "Select an event to view/edit/delete or %d to return: ", eventCount + 1);
     char buf[16];
-    inputCentered(selectPrompt, buf, sizeof(buf));
+    inputUnifiedBlock(selectPrompt, buf, sizeof(buf));
     if (sscanf(buf, "%d", &choice) != 1)
     {
-        printCentered("Invalid input.");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("Invalid input.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        getch();
         return;
     }
     if (choice < 1 || choice > eventCount + 1)
     {
-        printCentered("Invalid choice.");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("Invalid choice.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        getch();
         return;
     }
     if (choice == eventCount + 1)
@@ -1449,43 +1645,68 @@ void adminViewAllEvents()
     }
 
     // Show details for selected event
+    clear();
     sscanf(events[choice - 1], "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity);
-    printCentered("--- Event Details ---");
+    
+    resetUnifiedBlock();
+    printUnifiedBlockLeft("=== Event Details ===");
+    printUnifiedBlockLeft("");
     
     char buf_output[200];
     snprintf(buf_output, sizeof(buf_output), "Name: %s", name);
-    printCentered(buf_output);
+    printUnifiedBlockLeft(buf_output);
     snprintf(buf_output, sizeof(buf_output), "Venue: %s", venue);
-    printCentered(buf_output);
+    printUnifiedBlockLeft(buf_output);
     snprintf(buf_output, sizeof(buf_output), "Date (DD-MM-YYYY): %s", date);
-    printCentered(buf_output);
+    printUnifiedBlockLeft(buf_output);
     snprintf(buf_output, sizeof(buf_output), "Time: %s", time);
-    printCentered(buf_output);
+    printUnifiedBlockLeft(buf_output);
     snprintf(buf_output, sizeof(buf_output), "Seat Capacity: %d", seatCapacity);
-    printCentered(buf_output);
-
-    printCentered(""); // Add a blank line
-    printCentered("1. Edit Event");
-    printCentered("2. Delete Event");
-    printCentered("3. Return");
+    printUnifiedBlockLeft(buf_output);
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("1. Edit Event");
+    printUnifiedBlockLeft("2. Delete Event");
+    printUnifiedBlockLeft("3. Return");
+    
+    // Second pass - actually print
+    unified_blockFirstCall = 0;
+    printUnifiedBlockLeft("=== Event Details ===");
+    printUnifiedBlockLeft("");
+    snprintf(buf_output, sizeof(buf_output), "Name: %s", name);
+    printUnifiedBlockLeft(buf_output);
+    snprintf(buf_output, sizeof(buf_output), "Venue: %s", venue);
+    printUnifiedBlockLeft(buf_output);
+    snprintf(buf_output, sizeof(buf_output), "Date (DD-MM-YYYY): %s", date);
+    printUnifiedBlockLeft(buf_output);
+    snprintf(buf_output, sizeof(buf_output), "Time: %s", time);
+    printUnifiedBlockLeft(buf_output);
+    snprintf(buf_output, sizeof(buf_output), "Seat Capacity: %d", seatCapacity);
+    printUnifiedBlockLeft(buf_output);
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("1. Edit Event");
+    printUnifiedBlockLeft("2. Delete Event");
+    printUnifiedBlockLeft("3. Return");
+    
     int action;
     char buf2[16];
-    inputCentered("Select an option: ", buf2, sizeof(buf2));
+    inputUnifiedBlock("Select an option: ", buf2, sizeof(buf2));
     if (sscanf(buf2, "%d", &action) != 1)
     {
-        printCentered("Invalid input.");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("Invalid input.");
         return;
     }
 
     if (action == 1)
     {
         // Edit event
+        clear();
         char newName[100], newVenue[100], newDate[20], newTime[20];
         while (getchar() != '\n')
             ; // clear input buffer
         char promptName[150];
         snprintf(promptName, sizeof(promptName), "Enter new event name (or press Enter to keep '%s'): ", name);
-        inputCentered(promptName, newName, sizeof(newName));
+        inputUnifiedBlock(promptName, newName, sizeof(newName));
         if (newName[0] == '\n')
             strcpy(newName, name);
         else
@@ -1497,7 +1718,7 @@ void adminViewAllEvents()
 
         char promptVenue[150];
         snprintf(promptVenue, sizeof(promptVenue), "Enter new venue (or press Enter to keep '%s'): ", venue);
-        inputCentered(promptVenue, newVenue, sizeof(newVenue));
+        inputUnifiedBlock(promptVenue, newVenue, sizeof(newVenue));
         if (newVenue[0] == '\n')
             strcpy(newVenue, venue);
         else
@@ -1509,7 +1730,7 @@ void adminViewAllEvents()
 
         char promptDate[150];
         snprintf(promptDate, sizeof(promptDate), "Enter new date (DD-MM-YYYY) (or press Enter to keep '%s'): ", date);
-        inputCentered(promptDate, newDate, sizeof(newDate));
+        inputUnifiedBlock(promptDate, newDate, sizeof(newDate));
         if (newDate[0] == '\n')
             strcpy(newDate, date);
         else
@@ -1521,7 +1742,7 @@ void adminViewAllEvents()
 
         char promptTime[150];
         snprintf(promptTime, sizeof(promptTime), "Enter new time (or press Enter to keep '%s'): ", time);
-        inputCentered(promptTime, newTime, sizeof(newTime));
+        inputUnifiedBlock(promptTime, newTime, sizeof(newTime));
         if (newTime[0] == '\n')
             strcpy(newTime, time);
         else
@@ -1534,17 +1755,17 @@ void adminViewAllEvents()
         char promptSeat[100];
         snprintf(promptSeat, sizeof(promptSeat), "Enter new seat capacity (or 0 to keep %d): ", seatCapacity);
         char buf3[16];
-        inputCentered(promptSeat, buf3, sizeof(buf3));
+        inputUnifiedBlock(promptSeat, buf3, sizeof(buf3));
         if (sscanf(buf3, "%d", &newSeatCapacity) != 1 || newSeatCapacity <= 0)
             newSeatCapacity = seatCapacity;
 
         // Update event in array
         snprintf(events[choice - 1], sizeof(events[choice - 1]), "%s|%s|%s|%s|%d\n", newName, newVenue, newDate, newTime, newSeatCapacity);
-        printCentered("Event updated successfully!");
-
-        // Add prompt to continue
-        char continueBuf[10];
-        inputCentered("Press Enter to continue...", continueBuf, sizeof(continueBuf));
+        
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("Event updated successfully!");
+        printUnifiedBlockLeft("Press any key to continue...");
+        getch();
         clear(); // Clear screen after event update
     }
     else if (action == 2)
@@ -1556,7 +1777,10 @@ void adminViewAllEvents()
         }
         eventCount--;
         clear();
-        printCentered("Event deleted successfully!");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("Event deleted successfully!");
+        printUnifiedBlockLeft("Press any key to continue...");
+        getch();
     }
     else
     {
@@ -1568,7 +1792,8 @@ void adminViewAllEvents()
     file = fopen("events.txt", "w");
     if (file == NULL)
     {
-        printCentered("Error updating events file!");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("Error updating events file!");
         return;
     }
     for (int i = 0; i < eventCount; i++)
@@ -1586,8 +1811,9 @@ void viewAllUsers()
     FILE *file = fopen(USER_INFO_FILE, "r");
     if (file == NULL)
     {
-        printCentered("No users found.");
-        printCentered("Press any key to continue...");
+        resetUnifiedBlock();
+        printUnifiedBlockLeft("No users found.");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
@@ -1610,10 +1836,9 @@ void viewAllUsers()
     }
     fclose(file);
     
-    printCentered("--- All Registered Users ---");
-    
-    // Use unified block for consistent alignment of header and data
     resetUnifiedBlock();
+    printUnifiedBlockLeft("=== All Registered Users ===");
+    printUnifiedBlockLeft("");
     printUnifiedBlockLeft("Ticket Code | Name");
     printUnifiedBlockLeft("---------------------------");
     
@@ -1629,13 +1854,12 @@ void viewAllUsers()
     }
     
     // Second pass: Actually print with alignment
-    resetUnifiedBlock();
     unified_blockFirstCall = 0; // Switch to printing mode
     
-    // Print header again with proper alignment
+    printUnifiedBlockLeft("=== All Registered Users ===");
+    printUnifiedBlockLeft("");
     printUnifiedBlockLeft("Ticket Code | Name");
     printUnifiedBlockLeft("---------------------------");
-    
     // Print user data with proper alignment
     for (int i = 0; i < userCount; i++)
     {
@@ -1647,16 +1871,17 @@ void viewAllUsers()
         }
     }
     
-    // Print bottom border and total count with centered alignment
+    // Print bottom border and total count
     printUnifiedBlockLeft("---------------------------");
+    printUnifiedBlockLeft("");
     
     char totalMsg[50];
     snprintf(totalMsg, sizeof(totalMsg), "Total registered users: %d", userCount);
-    printCentered(totalMsg);
+    printUnifiedBlockLeft(totalMsg);
 
     // Add prompt to continue
     char continueBuf[10];
-    inputCentered("Press Enter to continue...", continueBuf, sizeof(continueBuf));
+    inputUnifiedBlock("Press Enter to continue...", continueBuf, sizeof(continueBuf));
     clear(); // Clear screen after viewing users
 }
 
@@ -1702,11 +1927,30 @@ char* getEventNameByID(int eventID)
 
 void viewAllBookings()
 {
+    // Check if user is logged in
+    if (strlen(loggedInUserName) == 0)
+    {
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft("Error: You must be logged in to view your bookings.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("Error: You must be logged in to view your bookings.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        getch();
+        return;
+    }
+
     FILE *file = fopen(BOOKINGS_FILE, "r");
     if (file == NULL)
     {
-        printCentered("No bookings found.");
-        printCentered("Press any key to continue...");
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft("No bookings found.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("No bookings found.");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
@@ -1714,88 +1958,107 @@ void viewAllBookings()
     char line[200];
     int eventID;
     char name[100];
-    char bookings[50][200]; // Array to store bookings
-    int bookingCount = 0;
+    char userBookings[50][200]; // Array to store current user's bookings
+    int userBookingCount = 0;
 
-    // First pass: collect all booking information
-    while (fgets(line, sizeof(line), file) && bookingCount < 50)
+    // First pass: collect booking information for the logged-in user only
+    while (fgets(line, sizeof(line), file) && userBookingCount < 50)
     {
         if (sscanf(line, "%d %[^\n]", &eventID, name) == 2)
         {
-            // Store booking information
-            strcpy(bookings[bookingCount], line);
-            bookingCount++;
+            // Only store bookings for the current logged-in user
+            if (strcmp(name, loggedInUserName) == 0)
+            {
+                strcpy(userBookings[userBookingCount], line);
+                userBookingCount++;
+            }
         }
     }
     fclose(file);
     
-    if (bookingCount == 0)
+    if (userBookingCount == 0)
     {
-        printCentered("No bookings found.");
-        printCentered("Press any key to continue...");
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        char buf[200];
+        snprintf(buf, sizeof(buf), "No bookings found for %s.", loggedInUserName);
+        printUnifiedBlockLeft(buf);
+        printUnifiedBlockLeft("Press any key to continue...");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft(buf);
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
     
-    printCentered("--- All Bookings ---");
-    
-    // Use unified block for consistent alignment of header and data
+    // First pass: Calculate alignment
+    unified_blockFirstCall = 1;
     resetUnifiedBlock();
-    printUnifiedBlockLeft("Event Name | User Name");
+    char headerBuf[200];
+    snprintf(headerBuf, sizeof(headerBuf), "=== Your Bookings (%s) ===", loggedInUserName);
+    printUnifiedBlockLeft(headerBuf);
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("Event ID | Event Name");
     printUnifiedBlockLeft("---------------------------");
     
-    // First pass: collect all booking data for alignment calculation
-    for (int i = 0; i < bookingCount; i++)
+    for (int i = 0; i < userBookingCount; i++)
     {
-        if (sscanf(bookings[i], "%d %[^\n]", &eventID, name) == 2)
+        if (sscanf(userBookings[i], "%d %[^\n]", &eventID, name) == 2)
         {
             char *eventName = getEventNameByID(eventID);
             char buf[300];
-            snprintf(buf, sizeof(buf), "%s | %s", eventName, name);
+            snprintf(buf, sizeof(buf), "%d | %s", eventID, eventName);
             printUnifiedBlockLeft(buf);
         }
     }
+    printUnifiedBlockLeft("---------------------------");
     
     // Second pass: Actually print with alignment
-    resetUnifiedBlock();
-    unified_blockFirstCall = 0; // Switch to printing mode
+    unified_blockFirstCall = 0;
     
-    // Print header again with proper alignment
-    printUnifiedBlockLeft("Event Name | User Name");
+    printUnifiedBlockLeft(headerBuf);
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("Event ID | Event Name");
     printUnifiedBlockLeft("---------------------------");
     
-    // Print booking data with proper alignment
-    for (int i = 0; i < bookingCount; i++)
+    for (int i = 0; i < userBookingCount; i++)
     {
-        if (sscanf(bookings[i], "%d %[^\n]", &eventID, name) == 2)
+        if (sscanf(userBookings[i], "%d %[^\n]", &eventID, name) == 2)
         {
             char *eventName = getEventNameByID(eventID);
             char buf[300];
-            snprintf(buf, sizeof(buf), "%s | %s", eventName, name);
+            snprintf(buf, sizeof(buf), "%d | %s", eventID, eventName);
             printUnifiedBlockLeft(buf);
         }
     }
     
-    // Print bottom border with unified block alignment
     printUnifiedBlockLeft("---------------------------");
 
     // Add prompt to continue
     char continueBuf[10];
-    inputCentered("Press Enter to continue...", continueBuf, sizeof(continueBuf));
-    clear(); // Clear screen after viewing bookings
+    inputUnifiedBlock("Press Enter to continue...", continueBuf, sizeof(continueBuf));
+    clear();
 }
 
 void bookSeat()
 {
     int eventID;
-
-    printCentered("-- Book a Seat --");
+    
+    // First pass: Calculate alignment for entire function
+    unified_blockFirstCall = 1;
+    resetUnifiedBlock();
+    printUnifiedBlockLeft("-- Book a Seat --");
     
     // Check if user is logged in
     if (strlen(loggedInUserName) == 0)
     {
-        printCentered("Error: You must be logged in to book a seat.");
-        printCentered("Press any key to continue...");
+        printUnifiedBlockLeft("Error: You must be logged in to book a seat.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        // Second pass: Display
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("-- Book a Seat --");
+        printUnifiedBlockLeft("Error: You must be logged in to book a seat.");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
@@ -1804,8 +2067,13 @@ void bookSeat()
     FILE *file = fopen("events.txt", "r");
     if (file == NULL)
     {
-        printCentered("No events found.");
-        printCentered("Press any key to continue...");
+        printUnifiedBlockLeft("No events found.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        // Second pass: Display
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("-- Book a Seat --");
+        printUnifiedBlockLeft("No events found.");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
@@ -1816,10 +2084,9 @@ void bookSeat()
     int eventCount = 0;
     char events[50][300]; // Store up to 50 events
 
-    printCentered("-- Available Events --");
+    printUnifiedBlockLeft("-- Available Events --");
     
-    // First pass - collect all event strings
-    resetUnifiedBlock();
+    // First pass - collect all event strings for alignment calculation
     while (fgets(line, sizeof(line), file))
     {
         if (sscanf(line, "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", eventName, venue, date, time, &seatCapacity) == 5)
@@ -1835,8 +2102,14 @@ void bookSeat()
     
     if (eventCount == 0)
     {
-        printCentered("No events found.");
-        printCentered("Press any key to continue...");
+        printUnifiedBlockLeft("No events found.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        // Second pass: Display
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("-- Book a Seat --");
+        printUnifiedBlockLeft("-- Available Events --");
+        printUnifiedBlockLeft("No events found.");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
@@ -1846,10 +2119,12 @@ void bookSeat()
     printUnifiedBlockLeft(buf);
     
     // Second pass - actually print with proper alignment
-    resetUnifiedBlock();
-    unified_blockFirstCall = 0;  // Turn off first_call flag to trigger printing
+    unified_blockFirstCall = 0;
     
-    // Print the event list again with proper alignment
+    printUnifiedBlockLeft("-- Book a Seat --");
+    printUnifiedBlockLeft("-- Available Events --");
+    
+    // Print the event list with proper alignment
     for (int i = 0; i < eventCount; i++) {
         char name[100], venue[100], date[20], time[20];
         int seatCapacity;
@@ -1868,19 +2143,29 @@ void bookSeat()
     char promptBuf[100];
     snprintf(promptBuf, sizeof(promptBuf), "Enter event ID to book: ");
     char buf2[16];
-    inputCentered(promptBuf, buf2, sizeof(buf2));
+    inputUnifiedBlock(promptBuf, buf2, sizeof(buf2));
     if (sscanf(buf2, "%d", &eventID) != 1)
     {
-        printCentered("Invalid input for Event ID.");
-        printCentered("Press any key to continue...");
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft("Invalid input for Event ID.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("Invalid input for Event ID.");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
 
     if (eventID < 1 || eventID > eventCount + 1)
     {
-        printCentered("Invalid Event ID");
-        printCentered("Press any key to continue...");
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft("Invalid Event ID");
+        printUnifiedBlockLeft("Press any key to continue...");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("Invalid Event ID");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
@@ -1897,31 +2182,53 @@ void bookSeat()
 
     // Show confirmation with booking details
     clear();
-    printCentered("--- Booking Confirmation ---");
-    printCentered("");
+    resetUnifiedBlock();
+    unified_blockFirstCall = 1;
+    printUnifiedBlockLeft("--- Booking Confirmation ---");
+    printUnifiedBlockLeft("");
     snprintf(buf, sizeof(buf), "Seat booked successfully for %s", loggedInUserName);
-    printCentered(buf);
+    printUnifiedBlockLeft(buf);
     snprintf(buf, sizeof(buf), "Event ID: %d", eventID);
-    printCentered(buf);
+    printUnifiedBlockLeft(buf);
     
     // Show event name from the stored events
     sscanf(events[eventID - 1], "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", eventName, venue, date, time, &seatCapacity);
     snprintf(buf, sizeof(buf), "Event: %s", eventName);
-    printCentered(buf);
-    printCentered("");
+    printUnifiedBlockLeft(buf);
+    printUnifiedBlockLeft("");
+
+    // Second pass: Display confirmation
+    unified_blockFirstCall = 0;
+    printUnifiedBlockLeft("--- Booking Confirmation ---");
+    printUnifiedBlockLeft("");
+    snprintf(buf, sizeof(buf), "Seat booked successfully for %s", loggedInUserName);
+    printUnifiedBlockLeft(buf);
+    snprintf(buf, sizeof(buf), "Event ID: %d", eventID);
+    printUnifiedBlockLeft(buf);
+    snprintf(buf, sizeof(buf), "Event: %s", eventName);
+    printUnifiedBlockLeft(buf);
+    printUnifiedBlockLeft("");
 
     // Add prompt to continue
     char continueBuf[10];
-    inputCentered("Press Enter to continue...", continueBuf, sizeof(continueBuf));
+    inputUnifiedBlock("Press Enter to continue...", continueBuf, sizeof(continueBuf));
     clear(); // Clear screen after booking confirmation
 }
 
 void bookSeatDirectly(int eventID)
 {
+    // First pass: Calculate alignment
+    unified_blockFirstCall = 1;
+    resetUnifiedBlock();
+    
     if (strlen(loggedInUserName) == 0)
     {
-        printCentered("Error: You must be logged in to book a seat.");
-        printCentered("Press any key to continue...");
+        printUnifiedBlockLeft("Error: You must be logged in to book a seat.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        // Second pass: Display
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("Error: You must be logged in to book a seat.");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
@@ -1930,8 +2237,12 @@ void bookSeatDirectly(int eventID)
     FILE *file = fopen("events.txt", "r");
     if (file == NULL)
     {
-        printCentered("No events found.");
-        printCentered("Press any key to continue...");
+        printUnifiedBlockLeft("No events found.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        // Second pass: Display
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("No events found.");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
@@ -1947,35 +2258,49 @@ void bookSeatDirectly(int eventID)
     
     if (eventID < 1 || eventID > eventCount)
     {
-        printCentered("Invalid Event ID");
-        printCentered("Press any key to continue...");
+        printUnifiedBlockLeft("Invalid Event ID");
+        printUnifiedBlockLeft("Press any key to continue...");
+        // Second pass: Display
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("Invalid Event ID");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
 
-    printCentered("-- Book a Seat --");
-    printCentered("");
+    printUnifiedBlockLeft("-- Book a Seat --");
+    printUnifiedBlockLeft("");
     
     // Display confirmation message showing the logged-in user
     char userMsg[200];
     snprintf(userMsg, sizeof(userMsg), "Booking seat for: %s", loggedInUserName);
-    printCentered(userMsg);
-    printCentered("");
-
-    // Save the booking using the logged-in user's name
-    saveBooking(eventID, loggedInUserName);
+    printUnifiedBlockLeft(userMsg);
+    printUnifiedBlockLeft("");
 
     // Show confirmation
     char buf[200];
     snprintf(buf, sizeof(buf), "Seat booked successfully for %s at event ID %d.", loggedInUserName, eventID);
-    printCentered("");
-    printCentered("--- Booking Confirmation ---");
-    printCentered(buf);
-    printCentered("");
+    printUnifiedBlockLeft("--- Booking Confirmation ---");
+    printUnifiedBlockLeft(buf);
+    printUnifiedBlockLeft("");
+
+    // Second pass: Display everything
+    unified_blockFirstCall = 0;
+    printUnifiedBlockLeft("-- Book a Seat --");
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft(userMsg);
+    printUnifiedBlockLeft("");
+
+    // Save the booking using the logged-in user's name
+    saveBooking(eventID, loggedInUserName);
+
+    printUnifiedBlockLeft("--- Booking Confirmation ---");
+    printUnifiedBlockLeft(buf);
+    printUnifiedBlockLeft("");
 
     // Add prompt to continue
     char continueBuf[10];
-    inputCentered("Press Enter to continue...", continueBuf, sizeof(continueBuf));
+    inputUnifiedBlock("Press Enter to continue...", continueBuf, sizeof(continueBuf));
     clear(); // Clear screen after booking confirmation
 }
 
@@ -1983,29 +2308,48 @@ void cancelBooking()
 {
     int eventID;
 
+    // First pass: Calculate alignment
+    unified_blockFirstCall = 1;
+    resetUnifiedBlock();
+    
     // Check if user is logged in
     if (strlen(loggedInUserName) == 0)
     {
-        printCentered("Error: You must be logged in to cancel a booking.");
-        printCentered("Press any key to continue...");
+        printUnifiedBlockLeft("Error: You must be logged in to cancel a booking.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        // Second pass: Display
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("Error: You must be logged in to cancel a booking.");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
 
-    printCentered("-- Cancel Booking --");
+    printUnifiedBlockLeft("-- Cancel Booking --");
     
     // Display confirmation message showing the logged-in user
     char userMsg[200];
     snprintf(userMsg, sizeof(userMsg), "Canceling booking for: %s", loggedInUserName);
-    printCentered(userMsg);
-    printCentered("");
+    printUnifiedBlockLeft(userMsg);
+    printUnifiedBlockLeft("");
+
+    // Second pass: Display everything
+    unified_blockFirstCall = 0;
+    printUnifiedBlockLeft("-- Cancel Booking --");
+    printUnifiedBlockLeft(userMsg);
+    printUnifiedBlockLeft("");
 
     char buf[16];
-    inputCentered("Enter Event ID to cancel: ", buf, sizeof(buf));
+    inputUnifiedBlock("Enter Event ID to cancel: ", buf, sizeof(buf));
     if (sscanf(buf, "%d", &eventID) != 1)
     {
-        printCentered("Invalid input for Event ID.");
-        printCentered("Press any key to continue...");
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft("Invalid input for Event ID.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("Invalid input for Event ID.");
+        printUnifiedBlockLeft("Press any key to continue...");
         getch();
         return;
     }
@@ -2015,7 +2359,7 @@ void cancelBooking()
 
     // Add prompt to continue
     char continueBuf[10];
-    inputCentered("Press Enter to continue...", continueBuf, sizeof(continueBuf));
+    inputUnifiedBlock("Press Enter to continue...", continueBuf, sizeof(continueBuf));
     clear(); // Clear screen after cancellation process
 }
 
@@ -2024,7 +2368,11 @@ void saveBooking(int eventID, const char *name)
     FILE *file = fopen(BOOKINGS_FILE, "a");
     if (file == NULL)
     {
-        printCentered("Error opening file, Name of event ID not Found!");
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft("Error opening file, Name of event ID not Found!");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("Error opening file, Name of event ID not Found!");
         return;
     }
 
@@ -2039,7 +2387,11 @@ void removeBooking(int eventID, const char *name)
 
     if (file == NULL || tempFile == NULL)
     {
-        printCentered("Error opening file!");
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft("Error opening file!");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("Error opening file!");
         if (file)
             fclose(file);
         if (tempFile)
@@ -2072,13 +2424,32 @@ void removeBooking(int eventID, const char *name)
     {
         remove(BOOKINGS_FILE);
         rename("temp.txt", BOOKINGS_FILE);
-        printCentered("Booking successfully canceled.");
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft("Booking successfully canceled.");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("Booking successfully canceled.");
     }
     else
     {
         remove("temp.txt");
         char buf[200];
         snprintf(buf, sizeof(buf), "No booking found for %s at event ID %d.", name, eventID);
-        printCentered(buf);
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft(buf);
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft(buf);
     }
+}
+
+/*
+ * ========================= MAIN FUNCTION =========================
+ */
+int main()
+{
+    system("chcp 65001");
+    srand((unsigned int)time(NULL));  // Initialize random seed for ticket generation
+    landingPage();
+    return 0;
 }
