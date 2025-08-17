@@ -76,15 +76,13 @@ void viewEventDetails();
 void viewEventDetailsOnly();
 char* getEventNameByID(int eventID);
 
-/*
- * ========================= USER INTERFACE =========================
- */
-
+// Clear the console screen
 void clear()
 {
     system("cls");
 }
 
+// Print text centered on the screen
 void printCentered(const char *str)
 {
     int width = getConsoleWidth();
@@ -96,6 +94,7 @@ void printCentered(const char *str)
     printf("%s\n", str);
 }
 
+// Get user input with centered prompt
 void inputCentered(const char *prompt, char *buffer, int size)
 {
     int width = getConsoleWidth();
@@ -118,6 +117,7 @@ void inputCentered(const char *prompt, char *buffer, int size)
         buffer[len - 1] = '\0';
 }
 
+// Get password input with hidden characters (shows asterisks)
 void inputPasswordHidden(const char *prompt, char *buffer, int size)
 {
     int width = getConsoleWidth();
@@ -170,6 +170,7 @@ void inputPasswordHidden(const char *prompt, char *buffer, int size)
     printf("\n"); // Move to next line
 }
 
+// Display the welcome screen with ASCII art
 void welcomePage()
 {
     const char *art[] = {
@@ -226,6 +227,7 @@ void welcomePage()
     SetConsoleTextAttribute(hConsole, originalAttrs);
 }
 
+// Display the dashboard ASCII art with colors
 void dashboardDesign()
 {
     HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -253,15 +255,12 @@ void dashboardDesign()
     SetConsoleTextAttribute(h, ci.wAttributes);
 }
 
-/*
- * ========================= UNIFIED POSITIONING SYSTEM =========================
- * Ensures consistent alignment across all UI elements
- */
-
+// Variables for unified positioning system
 static int unified_blockMaxLen = 0;
 static int unified_blockStartPos = -1;
 static int unified_blockFirstCall = 1;
 
+// Get the width of the console window
 int getConsoleWidth()
 {
     CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -271,6 +270,7 @@ int getConsoleWidth()
     return 80;
 }
 
+// Calculate centered position for content
 int calculateCenterPosition(int contentWidth)
 {
     int consoleWidth = getConsoleWidth();
@@ -278,6 +278,7 @@ int calculateCenterPosition(int contentWidth)
     return (centerPos < 0) ? 0 : centerPos;
 }
 
+// Print text with unified centered alignment
 void printUnified(const char *str)
 {
     int len = (int)strlen(str);
@@ -288,6 +289,7 @@ void printUnified(const char *str)
     printf("%s\n", str);
 }
 
+// Get input with unified centered alignment
 void inputUnified(const char *prompt, char *buffer, int size)
 {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -314,6 +316,7 @@ void inputUnified(const char *prompt, char *buffer, int size)
         buffer[len - 1] = '\0';
 }
 
+// Get input using unified block alignment system
 void inputUnifiedBlock(const char *prompt, char *buffer, int size)
 {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -343,6 +346,7 @@ void inputUnifiedBlock(const char *prompt, char *buffer, int size)
         buffer[len - 1] = '\0';
 }
 
+// Reset the unified block alignment system
 void resetUnifiedBlock()
 {
     unified_blockMaxLen = 0;
@@ -350,6 +354,7 @@ void resetUnifiedBlock()
     unified_blockFirstCall = 1;
 }
 
+// Print text using unified block left alignment
 void printUnifiedBlockLeft(const char *str)
 {
     int currentLen = (int)strlen(str);
@@ -372,6 +377,7 @@ void printUnifiedBlockLeft(const char *str)
     printf("%s\n", str);
 }
 
+// Get password input with unified alignment (shows asterisks)
 void inputPasswordUnified(char *buffer, int size)
 {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -420,10 +426,7 @@ void inputPasswordUnified(char *buffer, int size)
     printf("\n"); // Move to next line
 }
 
-/*
- * ========================= AUTHENTICATION & LANDING PAGE =========================
- */
-
+// Main landing page with menu options
 void landingPage()
 {
     int choice;
@@ -504,6 +507,7 @@ void landingPage()
     }
 }
 
+// Handle new user registration
 void newUserRegistration()
 {
     char name[100];
@@ -671,9 +675,7 @@ void newUserRegistration()
     userDashboard();
 }
 
-/**
- * Existing user login - validates credentials against stored data
- */
+// Handle existing user login with ticket validation
 void existingUserLogin()
 {
     char name[100];
@@ -798,9 +800,7 @@ void existingUserLogin()
     }
 }
 
-/**
- * Admin login - hardcoded credentials for admin access
- */
+// Handle admin login with hardcoded credentials
 void adminLogin()
 {
     char username[50], password[50];
@@ -875,10 +875,7 @@ void adminLogin()
     }
 }
 
-/**
- * Generate a unique 4-digit ticket code (0000-9999)
- * Returns -1 if unable to generate unique code after max attempts
- */
+// Generate a unique 4-digit ticket code for new users
 int generateUniqueTicketCode()
 {
     int maxAttempts = 1000;
@@ -899,10 +896,7 @@ int generateUniqueTicketCode()
     return -1; // Failed to generate unique code
 }
 
-/**
- * Check if a ticket code already exists in the user_info.txt file
- * Returns 1 if exists, 0 if not exists
- */
+// Check if a ticket code already exists
 int isTicketCodeExists(int ticketCode)
 {
     FILE *file = fopen(USER_INFO_FILE, "r");
@@ -931,10 +925,7 @@ int isTicketCodeExists(int ticketCode)
     return 0; // Code doesn't exist
 }
 
-/**
- * Check if a name already exists in the user_info.txt file
- * Returns 1 if name exists, 0 if it doesn't exist
- */
+// Check if a username already exists
 int isNameExists(const char *name)
 {
     FILE *file = fopen(USER_INFO_FILE, "r");
@@ -963,10 +954,7 @@ int isNameExists(const char *name)
     return 0; // Name doesn't exist
 }
 
-/**
- * Save user information (ticket code and name) to user_info.txt
- * Format: ticket,name
- */
+// Save user information to file
 void saveUserInfo(int ticketCode, const char *name)
 {
     FILE *file = fopen(USER_INFO_FILE, "a");
@@ -1013,10 +1001,7 @@ int validateUserLogin(const char *name, int ticketCode)
     return 0; // No match found
 }
 
-/*
- * ========================= NAVIGATION DASHBOARDS =========================
- */
-
+// Main user dashboard with options for booking, viewing events, etc.
 void userDashboard()
 {
     int choice;
@@ -1102,6 +1087,7 @@ void userDashboard()
     }
 }
 
+// Admin dashboard with management options for events, users, and bookings
 void adminDashboard()
 {
     int choice;
@@ -1181,9 +1167,7 @@ void adminDashboard()
         }
     }
 }
-/*
- * ========================= EVENT MANAGEMENT =========================
- */
+// Display all available events for users to view and book
 void viewEvents()
 {
     FILE *file = fopen("events.txt", "r");
@@ -1607,6 +1591,7 @@ void viewEventDetailsOnly()
     viewEventDetailsOnly(); // Recursive call to show list again
 }
 
+// Add a new event (admin only)
 void addEvent()
 {
     char name[100], venue[100], date[20], time[20];
@@ -1731,6 +1716,7 @@ void addEvent()
     clear(); // Clear screen after adding event
 }
 
+// Display all events for admin with options to view details
 void adminViewAllEvents()
 {
     FILE *file = fopen("events.txt", "r");
@@ -2081,6 +2067,7 @@ char* getEventNameByID(int eventID)
     return eventName;
 }
 
+// Show all bookings for the currently logged-in user
 void viewAllBookings()
 {
     // Check if user is logged in
@@ -2289,6 +2276,7 @@ void adminViewAllBookings()
     clear();
 }
 
+// Book a seat for an event (shows available events and lets user choose)
 void bookSeat()
 {
     int eventID;
@@ -2553,6 +2541,7 @@ void bookSeatDirectly(int eventID)
     clear(); // Clear screen after booking confirmation
 }
 
+// Cancel a booking for the logged-in user
 void cancelBooking()
 {
     int eventID;
@@ -2692,6 +2681,7 @@ void cancelBooking()
     clear(); // Clear screen after cancellation process
 }
 
+// Save a booking to the bookings file
 void saveBooking(int eventID, const char *name)
 {
     FILE *file = fopen(BOOKINGS_FILE, "a");
@@ -2709,6 +2699,7 @@ void saveBooking(int eventID, const char *name)
     fclose(file);
 }
 
+// Remove a booking from the bookings file
 void removeBooking(int eventID, const char *name)
 {
     FILE *file = fopen(BOOKINGS_FILE, "r");
@@ -2772,9 +2763,7 @@ void removeBooking(int eventID, const char *name)
     }
 }
 
-/*
- * ========================= MAIN FUNCTION =========================
- */
+// Main entry point - initializes the application and starts the landing page
 int main()
 {
     system("chcp 65001");
