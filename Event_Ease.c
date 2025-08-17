@@ -73,6 +73,7 @@ void removeBooking(int eventID, const char *name);
 void viewAllBookings();
 void adminViewAllBookings();
 void viewEventDetails();
+void viewEventDetailsOnly();
 char* getEventNameByID(int eventID);
 
 /*
@@ -1052,7 +1053,7 @@ void userDashboard()
         {
         case 1:
             clear();
-            viewEventDetails();
+            viewEventDetailsOnly();
             break;
         case 2:
             clear();
@@ -1428,6 +1429,176 @@ void viewEventDetails()
         clear();
         break;
     }
+}
+
+void viewEventDetailsOnly()
+{
+    FILE *file = fopen("events.txt", "r");
+    if (file == NULL)
+    {
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft("No events found.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("No events found.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        getch();
+        return;
+    }
+
+    char line[300], name[100], venue[100], date[20], time[20];
+    int seatCapacity;
+    int eventCount = 0;
+    char events[50][300]; // Store up to 50 events
+
+    // First pass - collect all events
+    while (fgets(line, sizeof(line), file))
+    {
+        if (sscanf(line, "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity) == 5)
+        {
+            eventCount++;
+            snprintf(events[eventCount - 1], sizeof(events[eventCount - 1]), "%s|%s|%s|%s|%d", name, venue, date, time, seatCapacity);
+        }
+    }
+    fclose(file);
+    
+    if (eventCount == 0)
+    {
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft("No events available.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("No events available.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        getch();
+        return;
+    }
+    
+    // First pass: Calculate alignment
+    unified_blockFirstCall = 1;
+    resetUnifiedBlock();
+    printUnifiedBlockLeft("=== Available Events ===");
+    printUnifiedBlockLeft("");
+    
+    for (int i = 0; i < eventCount; i++) {
+        char name[100], venue[100], date[20], time[20];
+        int seatCapacity;
+        if (sscanf(events[i], "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity) == 5) {
+            char buf[200];
+            snprintf(buf, sizeof(buf), "%d. %s", i + 1, name);
+            printUnifiedBlockLeft(buf);
+        }
+    }
+    
+    char returnBuf[100];
+    snprintf(returnBuf, sizeof(returnBuf), "%d. Return to dashboard", eventCount + 1);
+    printUnifiedBlockLeft(returnBuf);
+    
+    // Second pass: Actually display
+    unified_blockFirstCall = 0;
+    printUnifiedBlockLeft("=== Available Events ===");
+    printUnifiedBlockLeft("");
+    
+    for (int i = 0; i < eventCount; i++) {
+        char name[100], venue[100], date[20], time[20];
+        int seatCapacity;
+        if (sscanf(events[i], "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity) == 5) {
+            char buf[200];
+            snprintf(buf, sizeof(buf), "%d. %s", i + 1, name);
+            printUnifiedBlockLeft(buf);
+        }
+    }
+    
+    printUnifiedBlockLeft(returnBuf);
+
+    // Get user's event selection
+    int choice;
+    char selectPrompt[100];
+    snprintf(selectPrompt, sizeof(selectPrompt), "Enter event ID to view details: ");
+    char buf_input[16];
+    inputUnifiedBlock(selectPrompt, buf_input, sizeof(buf_input));
+    if (sscanf(buf_input, "%d", &choice) != 1)
+    {
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft("Invalid input.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("Invalid input.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        getch();
+        return;
+    }
+    if (choice < 1 || choice > eventCount + 1)
+    {
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft("Invalid choice.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("Invalid choice.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        getch();
+        return;
+    }
+    if (choice == eventCount + 1)
+    {
+        clear(); // Clear screen before returning to dashboard
+        return;
+    }
+
+    // Show details for selected event (VIEW ONLY)
+    clear();
+    char eventName[100], eventVenue[100], eventDate[20], eventTime[20];
+    int eventCapacity;
+    sscanf(events[choice - 1], "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", eventName, eventVenue, eventDate, eventTime, &eventCapacity);
+    
+    // First pass: Calculate alignment
+    unified_blockFirstCall = 1;
+    resetUnifiedBlock();
+    printUnifiedBlockLeft("=== Event Details ===");
+    printUnifiedBlockLeft("");
+    
+    char detail_buf[200];
+    snprintf(detail_buf, sizeof(detail_buf), "Name: %s", eventName);
+    printUnifiedBlockLeft(detail_buf);
+    snprintf(detail_buf, sizeof(detail_buf), "Venue: %s", eventVenue);
+    printUnifiedBlockLeft(detail_buf);
+    snprintf(detail_buf, sizeof(detail_buf), "Date (DD-MM-YYYY): %s", eventDate);
+    printUnifiedBlockLeft(detail_buf);
+    snprintf(detail_buf, sizeof(detail_buf), "Time: %s", eventTime);
+    printUnifiedBlockLeft(detail_buf);
+    snprintf(detail_buf, sizeof(detail_buf), "Seat Capacity: %d", eventCapacity);
+    printUnifiedBlockLeft(detail_buf);
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("Press Enter to return to event list...");
+    
+    // Second pass: Actually display
+    unified_blockFirstCall = 0;
+    printUnifiedBlockLeft("=== Event Details ===");
+    printUnifiedBlockLeft("");
+    
+    snprintf(detail_buf, sizeof(detail_buf), "Name: %s", eventName);
+    printUnifiedBlockLeft(detail_buf);
+    snprintf(detail_buf, sizeof(detail_buf), "Venue: %s", eventVenue);
+    printUnifiedBlockLeft(detail_buf);
+    snprintf(detail_buf, sizeof(detail_buf), "Date (DD-MM-YYYY): %s", eventDate);
+    printUnifiedBlockLeft(detail_buf);
+    snprintf(detail_buf, sizeof(detail_buf), "Time: %s", eventTime);
+    printUnifiedBlockLeft(detail_buf);
+    snprintf(detail_buf, sizeof(detail_buf), "Seat Capacity: %d", eventCapacity);
+    printUnifiedBlockLeft(detail_buf);
+    printUnifiedBlockLeft("");
+    
+    // Simple return prompt (NO BOOKING OPTIONS)
+    char continueBuf[10];
+    inputUnifiedBlock("Press Enter to return to event list...", continueBuf, sizeof(continueBuf));
+    
+    // Return to event list to view more events
+    clear();
+    viewEventDetailsOnly(); // Recursive call to show list again
 }
 
 void addEvent()
