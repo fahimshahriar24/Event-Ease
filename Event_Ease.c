@@ -71,6 +71,7 @@ void cancelBooking();
 void saveBooking(int eventID, const char *name);
 void removeBooking(int eventID, const char *name);
 void viewAllBookings();
+void adminViewAllBookings();
 void viewEventDetails();
 char* getEventNameByID(int eventID);
 
@@ -1135,7 +1136,7 @@ void adminDashboard()
         {
         case 1:
             clear();
-            viewAllBookings();
+            adminViewAllBookings();
             break;
         case 2:
             clear();
@@ -2028,6 +2029,99 @@ void viewAllBookings()
             char *eventName = getEventNameByID(eventID);
             char buf[300];
             snprintf(buf, sizeof(buf), "%d | %s", eventID, eventName);
+            printUnifiedBlockLeft(buf);
+        }
+    }
+    
+    printUnifiedBlockLeft("---------------------------");
+
+    // Add prompt to continue
+    char continueBuf[10];
+    inputUnifiedBlock("Press Enter to continue...", continueBuf, sizeof(continueBuf));
+    clear();
+}
+
+void adminViewAllBookings()
+{
+    FILE *file = fopen(BOOKINGS_FILE, "r");
+    if (file == NULL)
+    {
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft("No bookings found.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("No bookings found.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        getch();
+        return;
+    }
+
+    char line[200];
+    int eventID;
+    char name[100];
+    char allBookings[100][200]; // Array to store all bookings
+    int totalBookingCount = 0;
+
+    // Collect all booking information
+    while (fgets(line, sizeof(line), file) && totalBookingCount < 100)
+    {
+        if (sscanf(line, "%d %[^\n]", &eventID, name) == 2)
+        {
+            strcpy(allBookings[totalBookingCount], line);
+            totalBookingCount++;
+        }
+    }
+    fclose(file);
+    
+    if (totalBookingCount == 0)
+    {
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft("No bookings found.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("No bookings found.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        getch();
+        return;
+    }
+    
+    // First pass: Calculate alignment
+    unified_blockFirstCall = 1;
+    resetUnifiedBlock();
+    printUnifiedBlockLeft("=== All Bookings (Admin View) ===");
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("Username - Event Name");
+    printUnifiedBlockLeft("---------------------------");
+    
+    for (int i = 0; i < totalBookingCount; i++)
+    {
+        if (sscanf(allBookings[i], "%d %[^\n]", &eventID, name) == 2)
+        {
+            char *eventName = getEventNameByID(eventID);
+            char buf[300];
+            snprintf(buf, sizeof(buf), "%s - %s", name, eventName);
+            printUnifiedBlockLeft(buf);
+        }
+    }
+    printUnifiedBlockLeft("---------------------------");
+    
+    // Second pass: Actually print with alignment
+    unified_blockFirstCall = 0;
+    
+    printUnifiedBlockLeft("=== All Bookings (Admin View) ===");
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("Username - Event Name");
+    printUnifiedBlockLeft("---------------------------");
+    
+    for (int i = 0; i < totalBookingCount; i++)
+    {
+        if (sscanf(allBookings[i], "%d %[^\n]", &eventID, name) == 2)
+        {
+            char *eventName = getEventNameByID(eventID);
+            char buf[300];
+            snprintf(buf, sizeof(buf), "%s - %s", name, eventName);
             printUnifiedBlockLeft(buf);
         }
     }
