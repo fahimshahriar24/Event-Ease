@@ -13,7 +13,7 @@
 #include <string.h>
 #include <windows.h>
 #include <conio.h>
-#include <time.h>
+#include <time.h>  
 
 
 #define BOOKINGS_FILE "bookings.txt"
@@ -1751,8 +1751,8 @@ void adminViewAllEvents()
         if (sscanf(line, "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity) == 5)
         {
             eventCount++;
-            strncpy(events[eventCount - 1], line, sizeof(events[eventCount - 1]) - 1);
-            events[eventCount - 1][sizeof(events[eventCount - 1]) - 1] = '\0';
+            // Store event without newline character
+            snprintf(events[eventCount - 1], sizeof(events[eventCount - 1]), "%s|%s|%s|%s|%d", name, venue, date, time, seatCapacity);
             char eventBuf[200];
             snprintf(eventBuf, sizeof(eventBuf), "%d. %s", eventCount, name);
             printUnifiedBlockLeft(eventBuf);
@@ -1766,6 +1766,8 @@ void adminViewAllEvents()
     // Second pass - actually print with proper alignment
     resetUnifiedBlock();
     unified_blockFirstCall = 0;  // Turn off first_call flag to trigger printing
+    printUnifiedBlockLeft("=== All Events ===");
+    printUnifiedBlockLeft("");
     
     // Re-open file and print the event list again with proper alignment
     file = fopen("events.txt", "r");
@@ -1776,6 +1778,8 @@ void adminViewAllEvents()
             if (sscanf(line, "%99[^|]|%99[^|]|%19[^|]|%19[^|]|%d", name, venue, date, time, &seatCapacity) == 5)
             {
                 eventCount++;
+                // Store event data again to ensure consistency
+                snprintf(events[eventCount - 1], sizeof(events[eventCount - 1]), "%s|%s|%s|%s|%d", name, venue, date, time, seatCapacity);
                 char eventBuf[200];
                 snprintf(eventBuf, sizeof(eventBuf), "%d. %s", eventCount, name);
                 printUnifiedBlockLeft(eventBuf);
@@ -1874,55 +1878,29 @@ void adminViewAllEvents()
         // Edit event
         clear();
         char newName[100], newVenue[100], newDate[20], newTime[20];
-        while (getchar() != '\n')
-            ; // clear input buffer
         char promptName[150];
         snprintf(promptName, sizeof(promptName), "Enter new event name (or press Enter to keep '%s'): ", name);
         inputUnifiedBlock(promptName, newName, sizeof(newName));
-        if (newName[0] == '\n')
+        if (strlen(newName) == 0)
             strcpy(newName, name);
-        else
-        {
-            size_t l = strlen(newName);
-            if (l > 0 && newName[l - 1] == '\n')
-                newName[l - 1] = '\0';
-        }
 
         char promptVenue[150];
         snprintf(promptVenue, sizeof(promptVenue), "Enter new venue (or press Enter to keep '%s'): ", venue);
         inputUnifiedBlock(promptVenue, newVenue, sizeof(newVenue));
-        if (newVenue[0] == '\n')
+        if (strlen(newVenue) == 0)
             strcpy(newVenue, venue);
-        else
-        {
-            size_t l = strlen(newVenue);
-            if (l > 0 && newVenue[l - 1] == '\n')
-                newVenue[l - 1] = '\0';
-        }
 
         char promptDate[150];
         snprintf(promptDate, sizeof(promptDate), "Enter new date (DD-MM-YYYY) (or press Enter to keep '%s'): ", date);
         inputUnifiedBlock(promptDate, newDate, sizeof(newDate));
-        if (newDate[0] == '\n')
+        if (strlen(newDate) == 0)
             strcpy(newDate, date);
-        else
-        {
-            size_t l = strlen(newDate);
-            if (l > 0 && newDate[l - 1] == '\n')
-                newDate[l - 1] = '\0';
-        }
 
         char promptTime[150];
         snprintf(promptTime, sizeof(promptTime), "Enter new time (or press Enter to keep '%s'): ", time);
         inputUnifiedBlock(promptTime, newTime, sizeof(newTime));
-        if (newTime[0] == '\n')
+        if (strlen(newTime) == 0)
             strcpy(newTime, time);
-        else
-        {
-            size_t l = strlen(newTime);
-            if (l > 0 && newTime[l - 1] == '\n')
-                newTime[l - 1] = '\0';
-        }
 
         char promptSeat[100];
         snprintf(promptSeat, sizeof(promptSeat), "Enter new seat capacity (or 0 to keep %d): ", seatCapacity);
@@ -1931,8 +1909,8 @@ void adminViewAllEvents()
         if (sscanf(buf3, "%d", &newSeatCapacity) != 1 || newSeatCapacity <= 0)
             newSeatCapacity = seatCapacity;
 
-        // Update event in array
-        snprintf(events[choice - 1], sizeof(events[choice - 1]), "%s|%s|%s|%s|%d\n", newName, newVenue, newDate, newTime, newSeatCapacity);
+        // Update event in array (without extra newline)
+        snprintf(events[choice - 1], sizeof(events[choice - 1]), "%s|%s|%s|%s|%d", newName, newVenue, newDate, newTime, newSeatCapacity);
         
         resetUnifiedBlock();
         printUnifiedBlockLeft("Event updated successfully!");
@@ -1970,7 +1948,7 @@ void adminViewAllEvents()
     }
     for (int i = 0; i < eventCount; i++)
     {
-        fputs(events[i], file);
+        fprintf(file, "%s\n", events[i]);
     }
     fclose(file);
 }
