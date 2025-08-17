@@ -19,7 +19,8 @@ Event-Ease is a comprehensive event management application designed for simplici
 ### 🔧 Admin Features
 - **Complete Event Management**: Add, edit, and delete events
 - **User Analytics**: View all registered users and their information
-- **Booking Overview**: Monitor all bookings across the system with event names
+- **Enhanced Booking Overview**: Monitor all bookings in "username - event name" format
+- **No-Login Admin Viewing**: View all bookings without requiring user login
 - **Real-time Data**: Live updates of booking and user statistics
 
 ### 🎨 Technical Excellence
@@ -65,11 +66,13 @@ Event-Ease is a comprehensive event management application designed for simplici
 2. **Browse events** → View detailed event information
 3. **Book seats** → No need to re-enter name (automatic user recognition)
 4. **View bookings** → See event names, not just IDs
+5. **Smart cancellation** → View current bookings before selecting one to cancel
 
 ### Admin Control Panel
 - **Event Management**: Complete CRUD operations
 - **User Monitoring**: Track registrations and activity
-- **System Analytics**: Comprehensive booking overview
+- **Enhanced Analytics**: View all bookings in "username - event name" format
+- **No-Login Viewing**: Admin can view bookings without user authentication
 
 ## 📁 Project Structure
 
@@ -128,6 +131,9 @@ Event-Ease/
 ### Recent Improvements
 - ✅ Automatic user recognition in booking system
 - ✅ Event names in booking displays
+- ✅ Enhanced admin booking view with "username - event name" format
+- ✅ Smart cancellation with booking preview
+- ✅ No-login admin booking viewing
 - ✅ Enhanced comment clarity
 - ✅ Fixed Windows compatibility issues
 - ✅ Unified UI positioning system
@@ -149,11 +155,7 @@ We welcome contributions! Please see our contribution guidelines:
 4. Test thoroughly
 5. Submit a pull request
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - Built with modern C programming practices
 - Designed for educational and practical use

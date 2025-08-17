@@ -224,19 +224,26 @@ You can also book directly when viewing event details:
 
 #### ❌ Cancel Booking
 
-**Purpose**: Remove your existing reservations
+**Purpose**: Remove your existing reservations with smart booking preview
 
-**How to Use**:
+**Enhanced Process**:
 1. Select option 3 from dashboard
-2. System shows your logged-in name
-3. Enter the Event ID to cancel
-4. Confirmation of cancellation
+2. **System displays your current bookings** with event names
+3. **Review your bookings** before selecting which to cancel
+4. Enter the Event ID to cancel
+5. Confirmation of cancellation
 
 **Example**:
 ```
 -- Cancel Booking --
 
-Canceling booking for: John Doe
+Your Current Bookings (John Doe):
+
+Event ID | Event Name
+---------------------------
+1        | Faija's Wedding
+2        | Shunno Concert
+---------------------------
 
 Enter Event ID to cancel: 1
 
@@ -244,6 +251,12 @@ Booking successfully canceled.
 
 Press Enter to continue...
 ```
+
+**Benefits**:
+- ✅ See all your bookings before canceling
+- ✅ Event names displayed (not just IDs)
+- ✅ Prevents accidental cancellations
+- ✅ Professional table format
 
 #### 📋 View All Bookings
 
@@ -305,25 +318,32 @@ DASHBOARD (Beautiful ASCII Art)
 
 #### 📊 View All Bookings
 
-**Purpose**: Monitor all bookings across the entire system
+**Purpose**: Monitor all bookings across the entire system with enhanced format
 
 **Enhanced Features**:
-- Shows event names instead of IDs
-- Lists all users and their bookings
-- Professional table format
+- Shows bookings in "username - event name" format
+- Lists all users and their bookings professionally
+- No login required - direct admin access
+- Easy-to-read display format
 
 **Example Output**:
 ```
---- All Bookings ---
+=== All Bookings (Admin View) ===
 
-Event Name      | User Name
+Username - Event Name
 ---------------------------
-Faija's Wedding | John Doe
-Faija's Wedding | Alice Smith
-Shunno Concert  | Bob Wilson
-Shunno Concert  | John Doe
+John Doe - Faija's Wedding
+Alice Smith - Faija's Wedding
+Bob Wilson - Shunno Concert
+John Doe - Shunno Concert
 ---------------------------
 ```
+
+**Benefits**:
+- ✅ Clear "username - event name" format
+- ✅ No admin login required for viewing
+- ✅ Comprehensive booking overview
+- ✅ Professional presentation
 
 #### ➕ Add Event
 
@@ -530,6 +550,24 @@ Shunno Concert|DIU Campus|18-05-2025|18:45|1000
 - Streamlined booking process
 - Reduced user errors
 
+### 🎨 Enhanced Cancellation System
+
+**Feature**: Preview your bookings before cancellation
+**Benefits**:
+- See all current bookings with event names
+- Prevents accidental cancellations
+- Better decision making
+- Professional booking overview
+
+### 🛠️ Improved Admin Experience
+
+**Feature**: Enhanced admin booking management
+**Benefits**:
+- "Username - event name" format for clarity
+- No login required for viewing bookings
+- Streamlined admin workflow
+- Better booking oversight
+
 ### 🎨 Unified UI System
 
 **Feature**: Consistent alignment across all screens
@@ -574,6 +612,7 @@ Shunno Concert|DIU Campus|18-05-2025|18:45|1000
 - ✅ **Book early**: Popular events fill up quickly
 - ✅ **Double-check details**: Verify event information before booking
 - ✅ **Keep track**: Use "View All Bookings" to monitor your reservations
+- ✅ **Smart cancellation**: Review your bookings before canceling to avoid mistakes
 
 #### Navigation Tips
 - ✅ **Use number keys**: Always select options using numbers
@@ -597,6 +636,7 @@ Shunno Concert|DIU Campus|18-05-2025|18:45|1000
 - ✅ **Regular backups**: Copy data files frequently
 - ✅ **Monitor disk space**: Ensure adequate storage
 - ✅ **Update event information**: Keep details current
+- ✅ **Admin efficiency**: Use no-login booking view for quick monitoring
 
 ### 💡 Performance Tips
 
@@ -639,6 +679,8 @@ Shunno Concert|DIU Campus|18-05-2025|18:45|1000
 - Database integration options
 - Web interface version
 - Mobile compatibility
+- Advanced booking analytics
+- Email notification system
 
 #### How to Update
 1. Download latest version
@@ -657,5 +699,5 @@ Event-Ease is designed to make event management simple and efficient. This manua
 ---
 
 *Last Updated: August 17, 2025*  
-*Version: 2.0*  
-*Manual Version: 1.0*
+*Version: 2.1*  
+*Manual Version: 1.1*
