@@ -2402,16 +2402,13 @@ void cancelBooking()
 {
     int eventID;
 
-    // First pass: Calculate alignment
-    unified_blockFirstCall = 1;
-    resetUnifiedBlock();
-    
     // Check if user is logged in
     if (strlen(loggedInUserName) == 0)
     {
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
         printUnifiedBlockLeft("Error: You must be logged in to cancel a booking.");
         printUnifiedBlockLeft("Press any key to continue...");
-        // Second pass: Display
         unified_blockFirstCall = 0;
         printUnifiedBlockLeft("Error: You must be logged in to cancel a booking.");
         printUnifiedBlockLeft("Press any key to continue...");
@@ -2419,20 +2416,103 @@ void cancelBooking()
         return;
     }
 
-    printUnifiedBlockLeft("-- Cancel Booking --");
-    
-    // Display confirmation message showing the logged-in user
-    char userMsg[200];
-    snprintf(userMsg, sizeof(userMsg), "Canceling booking for: %s", loggedInUserName);
-    printUnifiedBlockLeft(userMsg);
-    printUnifiedBlockLeft("");
+    // First, show user's current bookings
+    FILE *file = fopen(BOOKINGS_FILE, "r");
+    if (file == NULL)
+    {
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        printUnifiedBlockLeft("No bookings found to cancel.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft("No bookings found to cancel.");
+        printUnifiedBlockLeft("Press any key to continue...");
+        getch();
+        return;
+    }
 
-    // Second pass: Display everything
+    char line[200];
+    int eventInLine;
+    char nameInLine[100];
+    char userBookings[50][200]; // Array to store current user's bookings
+    int userBookingCount = 0;
+
+    // Collect booking information for the logged-in user only
+    while (fgets(line, sizeof(line), file) && userBookingCount < 50)
+    {
+        if (sscanf(line, "%d %[^\n]", &eventInLine, nameInLine) == 2)
+        {
+            // Only store bookings for the current logged-in user
+            if (strcmp(nameInLine, loggedInUserName) == 0)
+            {
+                strcpy(userBookings[userBookingCount], line);
+                userBookingCount++;
+            }
+        }
+    }
+    fclose(file);
+    
+    if (userBookingCount == 0)
+    {
+        resetUnifiedBlock();
+        unified_blockFirstCall = 1;
+        char buf[200];
+        snprintf(buf, sizeof(buf), "No bookings found for %s to cancel.", loggedInUserName);
+        printUnifiedBlockLeft(buf);
+        printUnifiedBlockLeft("Press any key to continue...");
+        unified_blockFirstCall = 0;
+        printUnifiedBlockLeft(buf);
+        printUnifiedBlockLeft("Press any key to continue...");
+        getch();
+        return;
+    }
+    
+    // First pass: Calculate alignment for displaying bookings
+    unified_blockFirstCall = 1;
+    resetUnifiedBlock();
+    printUnifiedBlockLeft("-- Cancel Booking --");
+    char headerBuf[200];
+    snprintf(headerBuf, sizeof(headerBuf), "Your Current Bookings (%s):", loggedInUserName);
+    printUnifiedBlockLeft(headerBuf);
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("Event ID | Event Name");
+    printUnifiedBlockLeft("---------------------------");
+    
+    for (int i = 0; i < userBookingCount; i++)
+    {
+        if (sscanf(userBookings[i], "%d %[^\n]", &eventInLine, nameInLine) == 2)
+        {
+            char *eventName = getEventNameByID(eventInLine);
+            char buf[300];
+            snprintf(buf, sizeof(buf), "%d | %s", eventInLine, eventName);
+            printUnifiedBlockLeft(buf);
+        }
+    }
+    printUnifiedBlockLeft("---------------------------");
+    printUnifiedBlockLeft("");
+    
+    // Second pass: Actually display the bookings
     unified_blockFirstCall = 0;
     printUnifiedBlockLeft("-- Cancel Booking --");
-    printUnifiedBlockLeft(userMsg);
+    printUnifiedBlockLeft(headerBuf);
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("Event ID | Event Name");
+    printUnifiedBlockLeft("---------------------------");
+    
+    for (int i = 0; i < userBookingCount; i++)
+    {
+        if (sscanf(userBookings[i], "%d %[^\n]", &eventInLine, nameInLine) == 2)
+        {
+            char *eventName = getEventNameByID(eventInLine);
+            char buf[300];
+            snprintf(buf, sizeof(buf), "%d | %s", eventInLine, eventName);
+            printUnifiedBlockLeft(buf);
+        }
+    }
+    printUnifiedBlockLeft("---------------------------");
     printUnifiedBlockLeft("");
 
+    // Now ask for the event ID to cancel
     char buf[16];
     inputUnifiedBlock("Enter Event ID to cancel: ", buf, sizeof(buf));
     if (sscanf(buf, "%d", &eventID) != 1)
