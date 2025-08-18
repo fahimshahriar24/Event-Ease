@@ -46,6 +46,7 @@ void adminDashboard();
 void addEvent();
 void adminViewAllEvents();
 void viewAllUsers();
+void removeUser();
 void viewEventDetailsOnly();
 char* getEventNameByID(int eventID);
 
@@ -54,8 +55,56 @@ void bookSeat();
 void cancelBooking();
 void saveBooking(int eventID, const char *name);
 void removeBooking(int eventID, const char *name);
+int removeBookingsByUserName(const char *name);
 void viewAllBookings();
 void adminViewAllBookings();
+
+/**
+ * Remove all bookings associated with a given user name.
+ * Returns the count of removed bookings.
+ */
+int removeBookingsByUserName(const char *name)
+{
+    FILE *file = fopen(BOOKINGS_FILE, "r");
+    if (file == NULL)
+    {
+        return 0; // No bookings file
+    }
+
+    FILE *temp = fopen("temp.txt", "w");
+    if (temp == NULL)
+    {
+        fclose(file);
+        return 0;
+    }
+
+    char line[256];
+    int eventID;
+    char nameInLine[128];
+    int removed = 0;
+
+    while (fgets(line, sizeof(line), file))
+    {
+        // Format written by saveBooking: "%d %s\n"; read name up to newline
+        if (sscanf(line, "%d %127[^\n]", &eventID, nameInLine) != 2)
+        {
+            continue;
+        }
+        // Compare exact name
+        if (strcmp(nameInLine, name) == 0)
+        {
+            removed++;
+            continue; // Skip writing -> remove
+        }
+        fputs(line, temp);
+    }
+
+    fclose(file);
+    fclose(temp);
+    remove(BOOKINGS_FILE);
+    rename("temp.txt", BOOKINGS_FILE);
+    return removed;
+}
 
 // UI & design helpers (kept at bottom of file)
 void clear();
@@ -686,10 +735,11 @@ void adminDashboard()
             "2. Add Event",
             "3. View All Events",
             "4. View All Users",
-            "5. Logout",
+            "5. Remove User",
+            "6. Logout",
             "0. Exit"
         };
-        printMenuItemsWithBoxes("Admin Panel", adminMenu, 6);
+        printMenuItemsWithBoxes("Admin Panel", adminMenu, 7);
         
         // Get input using unified block positioning
     char buf[16];
@@ -723,6 +773,10 @@ void adminDashboard()
             viewAllUsers();
             break;
         case 5:
+            clear();
+            removeUser();
+            break;
+        case 6:
             clear();
             printNotice("Logging out of admin panel", 'I');
             Sleep(1500);
@@ -1258,6 +1312,156 @@ void viewAllUsers()
     clear();
 }
 
+/**
+ * Admin: Remove a user by entering a 4-digit ticket ID or their name.
+ * Also removes all bookings for that user.
+ */
+void removeUser()
+{
+    // Load users
+    FILE *file = fopen(USER_INFO_FILE, "r");
+    if (file == NULL)
+    {
+        boxBordered("No users found.", visualLen("No users found.") + 2);
+        printUnified("");
+        printNotice("Press any key to continue...", 'I');
+        getch();
+        return;
+    }
+
+    typedef struct { int ticket; char name[100]; } UserEntry;
+    UserEntry users[200];
+    int count = 0;
+    char line[256];
+    while (fgets(line, sizeof(line), file) && count < 200)
+    {
+        if (sscanf(line, "%d,%99[^\n]", &users[count].ticket, users[count].name) == 2)
+        {
+            count++;
+        }
+    }
+    fclose(file);
+
+    if (count == 0)
+    {
+        boxBordered("No users found.", visualLen("No users found.") + 2);
+        printUnified("");
+        printNotice("Press any key to continue...", 'I');
+        getch();
+        return;
+    }
+
+    // Build boxed list like others
+    const char *ptrs[200];
+    char items[200][300];
+    for (int i = 0; i < count; i++)
+    {
+        snprintf(items[i], sizeof(items[0]), "%04d | %s", users[i].ticket, users[i].name);
+        ptrs[i] = items[i];
+    }
+    printMenuItemsWithBoxes("All Registered Users", ptrs, count);
+
+    // Prompt for input with ability to cancel
+    char input[128];
+    inputUnified("Enter ticket ID (4 digits) or user name to remove (or press Enter to cancel): ", input, sizeof(input));
+    if (strlen(input) == 0)
+    {
+        printNotice("Removal canceled.", 'I');
+        printNotice("Press any key to continue...", 'I');
+        getch();
+        clear();
+        return;
+    }
+
+    // Resolve selection
+    int isTicket = 0, targetTicket = -1, targetIndex = -1;
+    int tmp;
+    if (sscanf(input, "%d", &tmp) == 1) { isTicket = 1; targetTicket = tmp; }
+
+    for (int i = 0; i < count; i++)
+    {
+        if (isTicket)
+        {
+            if (users[i].ticket == targetTicket) { targetIndex = i; break; }
+        }
+        else
+        {
+            if (equalsIgnoreCase(users[i].name, input)) { targetIndex = i; break; }
+        }
+    }
+
+    if (targetIndex == -1)
+    {
+        printNotice("No matching user found.", 'I');
+        printNotice("Press any key to continue...", 'I');
+        getch();
+        clear();
+        return;
+    }
+
+    // Confirmation block using unified block style
+    resetUnifiedBlock();
+    printUnifiedBlockLeft("Confirm User Deletion");
+    printUnifiedBlockLeft("");
+    char buf[256];
+    snprintf(buf, sizeof(buf), "Ticket: %04d", users[targetIndex].ticket);
+    printUnifiedBlockLeft(buf);
+    snprintf(buf, sizeof(buf), "Name: %s", users[targetIndex].name);
+    printUnifiedBlockLeft(buf);
+    printUnifiedBlockLeft("");
+    printUnifiedBlockLeft("Type YES to confirm deletion (anything else to cancel)");
+    // Second pass display
+    unified_blockFirstCall = 0;
+    printUnifiedBlockLeft("Confirm User Deletion");
+    printUnifiedBlockLeft("");
+    snprintf(buf, sizeof(buf), "Ticket: %04d", users[targetIndex].ticket);
+    printUnifiedBlockLeft(buf);
+    snprintf(buf, sizeof(buf), "Name: %s", users[targetIndex].name);
+    printUnifiedBlockLeft(buf);
+    printUnifiedBlockLeft("");
+    char confirm[16];
+    inputUnifiedBlock("Type YES to confirm: ", confirm, sizeof(confirm));
+
+    if (!(equalsIgnoreCase(confirm, "YES")))
+    {
+        printNotice("Deletion canceled.", 'I');
+        printNotice("Press any key to continue...", 'I');
+        getch();
+        clear();
+        return;
+    }
+
+    // Rewrite users excluding the target
+    FILE *out = fopen("temp.txt", "w");
+    if (out == NULL)
+    {
+        printNotice("Error opening temp file.", 'E');
+        return;
+    }
+    for (int i = 0; i < count; i++)
+    {
+        if (i == targetIndex) continue;
+        fprintf(out, "%04d,%s\n", users[i].ticket, users[i].name);
+    }
+    fclose(out);
+    remove(USER_INFO_FILE);
+    rename("temp.txt", USER_INFO_FILE);
+
+    // Cascade delete bookings
+    int removedBookings = removeBookingsByUserName(users[targetIndex].name);
+
+    printNotice("User removed successfully.", 'S');
+    if (removedBookings > 0)
+    {
+        char ibuf[128];
+        snprintf(ibuf, sizeof(ibuf), "Also removed %d booking(s) for this user.", removedBookings);
+        printNotice(ibuf, 'I');
+    }
+    printNotice("Press any key to continue...", 'I');
+    getch();
+    clear();
+}
+
 /*
  * ========================= BOOKING SYSTEM =========================
  */
@@ -1712,7 +1916,6 @@ int main()
 
 /*
  * ========================= UI & DESIGN HELPERS (definitions) =========================
- *  Placed at the bottom per requested organization. No logic changes.
  */
 
 // Clears the console screen for a fresh display
@@ -1724,18 +1927,24 @@ void clear()
 // Prints text centered on the console for professional appearance
 void printCentered(const char *str)
 {
+    if (!str) { printf("\n"); return; }
     int width = getConsoleWidth();
-    int len = visualLen(str);
+    // Right-trim spaces and tabs to avoid skewing centering
+    const char *end = str + strlen(str);
+    while (end > str && (end[-1] == ' ' || end[-1] == '\t')) end--;
+    // Copy trimmed into a local buffer
+    char buf[1024];
+    int n = (int)(end - str);
+    if (n < 0) n = 0;
+    if (n > (int)sizeof(buf) - 1) n = (int)sizeof(buf) - 1;
+    memcpy(buf, str, n); buf[n] = '\0';
+
+    int len = visualLen(buf);
     int pad = (width - len) / 2;
     if (pad < 0) pad = 0;
-    for (int i = 0; i < pad; i++)
-        putchar(' ');
-    printf("%s\n", str);
+    for (int i = 0; i < pad; i++) putchar(' ');
+    printf("%s\n", buf);
 }
-
-// (inputCentered removed as unused)
-
-// (inputPasswordHidden removed as unused)
 
 // Displays the beautiful ASCII art welcome screen with application branding
 void welcomePage()
@@ -1813,13 +2022,13 @@ void dashboardDesign()
     SetConsoleTextAttribute(h, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
     const char *art[] = {
-        "  _____             _____  _    _  ____    ____            _____   _____  ",
-        " |  __ \\    /\\     / ____|| |  | ||  _ \\  / __ \\    /\\    |  __ \\ |  __ \\ ",
-        " | |  | |  /  \\   | (___  | |__| || |_) || |  | |  /  \\   | |__) || |  | |",
-        " | |  | | / /\\ \\   \\\\___ \\ |  __  ||  _ < | |  | | / /\\ \\  |  _  / | |  | |",
-        " | |__| |/ ____ \\  ____) || |  | || |_) || |__| |/ ____ \\ | | \\ \\ | |__| |",
-        " |_____//_/    \\_\\|_____/ |_|  |_||____/  \\____//_/    \\_\\|_|  \\_\\|_____/ ",
-        "                                                                          "};
+        "  _____           _____ _    _ ____   ____          _____  _____  ",
+        " |  __ \\   /\\    / ____| |  | |  _ \\ / __ \\   /\\   |  __ \\|  __ \\ ",
+        " | |  | | /  \\  | (___ | |__| | |_) | |  | | /  \\  | |__) | |  | |",
+        " | |  | |/ /\\ \\  \\___ \\|  __  |  _ <| |  | |/ /\\ \\ |  _  /| |  | |",
+        " | |__| / ____ \\ ____) | |  | | |_) | |__| / ____ \\| | \\ \\| |__| |",
+        " |_____/_/    \\_\\_____/|_|  |_|____/ \\____/_/    \\_\\_|  \\_\\_____/ ",
+        "                                                                  "};
 
     int lines = sizeof(art) / sizeof(art[0]);
     for (int i = 0; i < lines; i++)
@@ -2205,3 +2414,11 @@ void inputPasswordUnified(char *buffer, int size)
     buffer[i] = '\0'; // Null terminate
     printf("\n"); // Move to next line
 }
+
+
+/*
+Contributors:
+1. Fahim Shahriar - 242-35-240
+2. Mahim Chowdhury Miraj - 242-35-283
+3. Israt Jahan Faija - 242-35-051
+*/

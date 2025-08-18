@@ -1,0 +1,21 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build Event_Ease",
+			"type": "shell",
+			"command": "gcc",
+			"args": [
+				"-o",
+				"Event_Ease.exe",
+				"Event_Ease.c",
+				"-luser32",
+				"-lkernel32"
+			],
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		}
+	]
+}
