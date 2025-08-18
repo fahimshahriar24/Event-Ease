@@ -434,7 +434,7 @@ void adminLogin()
     // Get password (hidden input)
     inputPasswordUnified(password, sizeof(password));
     
-    if (strcmp(username, "admin") == 0 && strcmp(password, "fahim1234") == 0)
+    if (strcmp(username, "admin") == 0 && strcmp(password, "strongpassword") == 0)
     {
         printf("\n");
         printNotice("Admin login successful!", 'S');
