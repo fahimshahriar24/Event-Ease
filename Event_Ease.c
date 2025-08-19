@@ -59,52 +59,7 @@ int removeBookingsByUserName(const char *name);
 void viewAllBookings();
 void adminViewAllBookings();
 
-/**
- * Remove all bookings associated with a given user name.
- * Returns the count of removed bookings.
- */
-int removeBookingsByUserName(const char *name)
-{
-    FILE *file = fopen(BOOKINGS_FILE, "r");
-    if (file == NULL)
-    {
-        return 0; // No bookings file
-    }
-
-    FILE *temp = fopen("temp.txt", "w");
-    if (temp == NULL)
-    {
-        fclose(file);
-        return 0;
-    }
-
-    char line[256];
-    int eventID;
-    char nameInLine[128];
-    int removed = 0;
-
-    while (fgets(line, sizeof(line), file))
-    {
-        // Format written by saveBooking: "%d %s\n"; read name up to newline
-        if (sscanf(line, "%d %127[^\n]", &eventID, nameInLine) != 2)
-        {
-            continue;
-        }
-        // Compare exact name
-        if (strcmp(nameInLine, name) == 0)
-        {
-            removed++;
-            continue; // Skip writing -> remove
-        }
-        fputs(line, temp);
-    }
-
-    fclose(file);
-    fclose(temp);
-    remove(BOOKINGS_FILE);
-    rename("temp.txt", BOOKINGS_FILE);
-    return removed;
-}
+ 
 
 // UI & design helpers (kept at bottom of file)
 void clear();
@@ -1834,6 +1789,53 @@ void removeBooking(int eventID, const char *name)
     }
 }
 
+/**
+ * Remove all bookings associated with a given user name.
+ * Returns the count of removed bookings.
+ */
+int removeBookingsByUserName(const char *name)
+{
+    FILE *file = fopen(BOOKINGS_FILE, "r");
+    if (file == NULL)
+    {
+        return 0; // No bookings file
+    }
+
+    FILE *temp = fopen("temp.txt", "w");
+    if (temp == NULL)
+    {
+        fclose(file);
+        return 0;
+    }
+
+    char line[256];
+    int eventID;
+    char nameInLine[128];
+    int removed = 0;
+
+    while (fgets(line, sizeof(line), file))
+    {
+        // Format written by saveBooking: "%d %s\n"; read name up to newline
+        if (sscanf(line, "%d %127[^\n]", &eventID, nameInLine) != 2)
+        {
+            continue;
+        }
+        // Compare exact name
+        if (strcmp(nameInLine, name) == 0)
+        {
+            removed++;
+            continue; // Skip writing -> remove
+        }
+        fputs(line, temp);
+    }
+
+    fclose(file);
+    fclose(temp);
+    remove(BOOKINGS_FILE);
+    rename("temp.txt", BOOKINGS_FILE);
+    return removed;
+}
+
 /*
  * ========================= MAIN FUNCTION =========================
  */
@@ -1981,11 +1983,11 @@ void adminDashboardDesign()
     SetConsoleTextAttribute(h, FOREGROUND_RED | FOREGROUND_INTENSITY);
 
     const char *ascii_art5 =
-        "           _____  __  __ _____ _   _ \n"
-        "     /\\   |  __ \\|  \\/  |_   _| \\ | |\n"
-        "    /  \\  | |  | | \\  / | | | |  \\| |\n"
-        "   / /\\ \\ | |  | | |\\/| | | | | . ` |\n"
-        "  / ____ \\| |__| | |  | |_| |_| |\\  |\n"
+        "            _____  __  __ _____ _   _ \n"
+        "     /\\    |  __ \\|  \\/  |_   _| \\ | |\n"
+        "    /  \\   | |  | | \\  / | | | |  \\| |\n"
+        "   / /\\ \\  | |  | | |\\/| | | | | . ` |\n"
+        "   / ____ \\ | |__| | |  | |_| |_| |\\  |\n"
         " /_/    \\_\\|_____/|_|  |_|_____|_| \\_|\n"
         "                                     \n"
         "                                     \n";
