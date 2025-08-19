@@ -2347,7 +2347,7 @@ void inputPasswordUnified(char *buffer, int size)
             i++;
             printf("%c", ch); // Display actual character first
             fflush(stdout);
-            Sleep(75); // Short preview for 75 ms
+            Sleep(100); // Short preview for 75 ms
             printf("\b*"); // Replace with asterisk
             fflush(stdout);
         }
