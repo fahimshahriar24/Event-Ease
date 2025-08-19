@@ -581,6 +581,13 @@ void userDashboard()
     while (1)
     {
         dashboardDesign();
+        // Show logged-in user at the top in a double-bordered box
+        if (strlen(loggedInUserName) > 0)
+        {
+            char who[200];
+            snprintf(who, sizeof(who), "Logged is as \"%s\".", loggedInUserName);
+            printNotice(who, 'I');
+        }
         const char *userMenu[] = {
             "1. View Event Details",
             "2. Book Seat",
