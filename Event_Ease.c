@@ -1955,7 +1955,7 @@ void dashboardDesign()
     SetConsoleTextAttribute(h, FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
     const char *art[] = {
-        "  _____           _____ _    _ ____   ____          _____  _____  ",
+        " _____           _____ _    _ ____   ____          _____  _____  ",
         " |  __ \\   /\\    / ____| |  | |  _ \\ / __ \\   /\\   |  __ \\|  __ \\ ",
         " | |  | | /  \\  | (___ | |__| | |_) | |  | | /  \\  | |__) | |  | |",
         " | |  | |/ /\\ \\  \\___ \\|  __  |  _ <| |  | |/ /\\ \\ |  _  /| |  | |",
