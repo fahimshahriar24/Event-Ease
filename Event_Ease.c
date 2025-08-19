@@ -207,39 +207,16 @@ void newUserRegistration()
     char name[100];
     int ticketCode;
     
-    resetUnifiedBlock();
-    printUnifiedBlockLeft("=== New User Registration ===");
-    printUnifiedBlockLeft("");
-    printUnifiedBlockLeft("Enter your name: ");
-    
-    resetUnifiedBlock();
-    unified_blockFirstCall = 0;
-    printUnifiedBlockLeft("=== New User Registration ===");
-    printUnifiedBlockLeft("");
-    
+    // Centered header and prompt for consistent alignment with notices
+    printUnified("=== New User Registration ===");
+    printUnified("");
+
     while (1)
     {
-        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-        CONSOLE_SCREEN_BUFFER_INFO csbi;
-        GetConsoleScreenBufferInfo(hConsole, &csbi);
-        
-        // Position cursor at the block's starting position
-        COORD pos = csbi.dwCursorPosition;
-        pos.X = unified_blockStartPos;
-        SetConsoleCursorPosition(hConsole, pos);
-        
-        printf("Enter your name: ");
-        fflush(stdout);
-        
-        // Move cursor right after prompt
-        pos.X += strlen("Enter your name: ");
-        SetConsoleCursorPosition(hConsole, pos);
-        
-        fgets(name, sizeof(name), stdin);
+        inputUnified("Enter your name: ", name, sizeof(name));
         size_t len = strlen(name);
-        if (len > 0 && name[len - 1] == '\n')
-            name[len - 1] = '\0';
-        
+        if (len > 0 && name[len - 1] == '\n') name[len - 1] = '\0';
+
         // Validate name (check if not empty and not just spaces)
         int valid = 0;
         for (int i = 0; name[i] != '\0'; i++)
@@ -250,68 +227,31 @@ void newUserRegistration()
                 break;
             }
         }
-        
+
         if (!valid || strlen(name) == 0)
         {
-            // Use unified block for error messages
-            resetUnifiedBlock();
-            printUnifiedBlockLeft("Name cannot be empty. Please enter a valid name.");
-            
-            resetUnifiedBlock();
-            unified_blockFirstCall = 0;
-            printUnifiedBlockLeft("Name cannot be empty. Please enter a valid name.");
-            
+            printNotice("Name cannot be empty. Please enter a valid name.", 'W');
             printNotice("Press any key to try again...", 'I');
             getch();
-            clear(); // Clear screen before asking for new name
-            
-            // Redisplay the registration header
-            resetUnifiedBlock();
-            printUnifiedBlockLeft("=== New User Registration ===");
-            printUnifiedBlockLeft("");
-            printUnifiedBlockLeft("Enter your name: ");
-            
-            // Calculate the unified block position first
-            resetUnifiedBlock();
-            unified_blockFirstCall = 0;
-            printUnifiedBlockLeft("=== New User Registration ===");
-            printUnifiedBlockLeft("");
-            
+            clear();
+            printUnified("=== New User Registration ===");
+            printUnified("");
             continue;
         }
-        
+
         // Check if name already exists
         if (isNameExists(name))
         {
-            // Use unified block for error messages
-            resetUnifiedBlock();
-            printUnifiedBlockLeft("This name is already registered!");
-            printUnifiedBlockLeft("Please choose a different name.");
-            
-            resetUnifiedBlock();
-            unified_blockFirstCall = 0;
-            printUnifiedBlockLeft("This name is already registered!");
-            printUnifiedBlockLeft("Please choose a different name.");
-            
+            printNotice("This name is already registered!", 'E');
+            printNotice("Please choose a different name.", 'I');
             printNotice("Press any key to try again...", 'I');
             getch();
-            clear(); // Clear screen before asking for new name
-            
-            // Redisplay the registration header
-            resetUnifiedBlock();
-            printUnifiedBlockLeft("=== New User Registration ===");
-            printUnifiedBlockLeft("");
-            printUnifiedBlockLeft("Enter your name: ");
-            
-            // Calculate the unified block position first
-            resetUnifiedBlock();
-            unified_blockFirstCall = 0;
-            printUnifiedBlockLeft("=== New User Registration ===");
-            printUnifiedBlockLeft("");
-            
+            clear();
+            printUnified("=== New User Registration ===");
+            printUnified("");
             continue;
         }
-        
+
         // Name is valid and unique
         break;
     }
@@ -331,23 +271,13 @@ void newUserRegistration()
     saveUserInfo(ticketCode, name);
     strcpy(loggedInUserName, name);
     
-    // Display registration success using unified block system (two-pass for alignment)
-    resetUnifiedBlock();
+    // Display registration success as bordered flash messages for UI consistency
     char ticketMsg[100];
-    printUnifiedBlockLeft("========================");
-    printUnifiedBlockLeft("");
     snprintf(ticketMsg, sizeof(ticketMsg), "Your ticket code is: %04d", ticketCode);
-    printUnifiedBlockLeft(ticketMsg);
-    printUnifiedBlockLeft("Please remember your ticket code for future logins.");
-    printUnifiedBlockLeft("");
-    
-    unified_blockFirstCall = 0; // second pass: actually print
+
     printNotice("Registration Successful!", 'S');
-    printUnifiedBlockLeft("========================");
-    printUnifiedBlockLeft("");
-    printUnifiedBlockLeft(ticketMsg);
-    printUnifiedBlockLeft("Please remember your ticket code for future logins.");
-    printUnifiedBlockLeft("");
+    printNotice(ticketMsg, 'I');
+    printNotice("Please remember your ticket code for future logins.", 'I');
     printNotice("Press any key to continue to your dashboard...", 'I');
     
     getch();
@@ -361,52 +291,40 @@ void existingUserLogin()
 {
     char name[100];
     int ticketCode;
-    
-    // Use unified block for consistent alignment
-    resetUnifiedBlock();
-    printUnifiedBlockLeft("=== User Login ===");
-    printUnifiedBlockLeft("");
-    printUnifiedBlockLeft("Enter your name: ");
-    printUnifiedBlockLeft("Enter your 4-digit ticket code: ");
-    
-    // Calculate the unified block position first
-    resetUnifiedBlock();
-    unified_blockFirstCall = 0;
-    printUnifiedBlockLeft("=== User Login ===");
-    printUnifiedBlockLeft("");
-    
-    // Get user credentials with manual positioning
+
+    // Centered header and prompts using common pad based on the longest prompt
+    printUnified("=== User Login ===");
+    printUnified("");
+
+    const char *p1 = "Enter your name: ";
+    const char *p2 = "Enter your 4-digit ticket code: ";
+    int w1 = visualLen(p1);
+    int w2 = visualLen(p2);
+    int maxw = (w1 > w2) ? w1 : w2;
+    int pad = calculateCenterPosition(maxw);
+
+    // Draw both prompts at the same pad so colons align vertically
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     GetConsoleScreenBufferInfo(hConsole, &csbi);
-    
-    // Get name
+
     COORD pos = csbi.dwCursorPosition;
-    pos.X = unified_blockStartPos;
-    SetConsoleCursorPosition(hConsole, pos);
-    printf("Enter your name: ");
-    fflush(stdout);
-    pos.X += strlen("Enter your name: ");
-    SetConsoleCursorPosition(hConsole, pos);
+    pos.X = pad; SetConsoleCursorPosition(hConsole, pos);
+    printf("%s", p1); fflush(stdout);
+    pos.X += w1; SetConsoleCursorPosition(hConsole, pos);
     fgets(name, sizeof(name), stdin);
     size_t len = strlen(name);
-    if (len > 0 && name[len - 1] == '\n')
-        name[len - 1] = '\0';
-    
-    // Get ticket code
+    if (len > 0 && name[len - 1] == '\n') name[len - 1] = '\0';
+
     GetConsoleScreenBufferInfo(hConsole, &csbi);
     pos = csbi.dwCursorPosition;
-    pos.X = unified_blockStartPos;
-    SetConsoleCursorPosition(hConsole, pos);
-    printf("Enter your 4-digit ticket code: ");
-    fflush(stdout);
-    pos.X += strlen("Enter your 4-digit ticket code: ");
-    SetConsoleCursorPosition(hConsole, pos);
+    pos.X = pad; SetConsoleCursorPosition(hConsole, pos);
+    printf("%s", p2); fflush(stdout);
+    pos.X += w2; SetConsoleCursorPosition(hConsole, pos);
     char ticketBuf[16];
     fgets(ticketBuf, sizeof(ticketBuf), stdin);
     len = strlen(ticketBuf);
-    if (len > 0 && ticketBuf[len - 1] == '\n')
-        ticketBuf[len - 1] = '\0';
+    if (len > 0 && ticketBuf[len - 1] == '\n') ticketBuf[len - 1] = '\0';
     
     if (sscanf(ticketBuf, "%d", &ticketCode) != 1)
     {
@@ -432,7 +350,7 @@ void existingUserLogin()
         printNotice("Welcome back!", 'I');
         printNotice("Press any key to continue to your dashboard...", 'I');
         getch();
-        clear();
+    clear();
         userDashboard();
     }
     else
@@ -448,44 +366,50 @@ void existingUserLogin()
 void adminLogin()
 {
     char username[50], password[50];
-    
-    // Use unified block for consistent alignment
-    resetUnifiedBlock();
-    printUnifiedBlockLeft("=== Admin Login ===");
-    printUnifiedBlockLeft("");
-    printUnifiedBlockLeft("Username: ");
-    printUnifiedBlockLeft("Password: ");
-    
-    // Calculate the unified block position first
-    resetUnifiedBlock();
-    unified_blockFirstCall = 0;
-    printUnifiedBlockLeft("=== Admin Login ===");
-    printUnifiedBlockLeft("");
-    
-    // Get admin credentials with manual positioning
+
+    // Centered header and prompts using common pad so labels align
+    printUnified("=== Admin Login ===");
+    printUnified("");
+
+    const char *ap1 = "Username: ";
+    const char *ap2 = "Password: ";
+    int aw1 = visualLen(ap1), aw2 = visualLen(ap2);
+    int amaxw = (aw1 > aw2) ? aw1 : aw2;
+    int apad = calculateCenterPosition(amaxw);
+
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     GetConsoleScreenBufferInfo(hConsole, &csbi);
-    
-    // Get username
+
     COORD pos = csbi.dwCursorPosition;
-    pos.X = unified_blockStartPos;
-    SetConsoleCursorPosition(hConsole, pos);
-    printf("Username: ");
-    fflush(stdout);
-    pos.X += strlen("Username: ");
-    SetConsoleCursorPosition(hConsole, pos);
+    pos.X = apad; SetConsoleCursorPosition(hConsole, pos);
+    printf("%s", ap1); fflush(stdout);
+    pos.X += aw1; SetConsoleCursorPosition(hConsole, pos);
     fgets(username, sizeof(username), stdin);
     size_t len = strlen(username);
-    if (len > 0 && username[len - 1] == '\n')
-        username[len - 1] = '\0';
-    
-    // Get password (hidden input)
-    inputPasswordUnified(password, sizeof(password));
+    if (len > 0 && username[len - 1] == '\n') username[len - 1] = '\0';
+
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    pos = csbi.dwCursorPosition;
+    pos.X = apad; SetConsoleCursorPosition(hConsole, pos);
+    // Use password prompt consistent with layout
+    printf("%s", ap2); fflush(stdout);
+    pos.X += aw2; SetConsoleCursorPosition(hConsole, pos);
+    // Read password hidden but starting at current cursor
+    int i = 0; char ch; password[0] = '\0';
+    while (i < (int)sizeof(password) - 1)
+    {
+        ch = getch();
+        if (ch == '\r' || ch == '\n') break;
+        else if (ch == '\b' && i > 0) { i--; printf("\b \b"); fflush(stdout); }
+        else if (ch != '\b') { password[i++] = ch; printf("*" ); fflush(stdout); }
+    }
+    password[i] = '\0';
+    printf("\n");
     
     if (strcmp(username, "admin") == 0 && strcmp(password, "strongpassword") == 0)
     {
-        printf("\n");
+    printf("\n");
         printNotice("Admin login successful!", 'S');
         printNotice("Access granted to admin panel.", 'I');
         printNotice("Press any key to continue...", 'I');
@@ -495,7 +419,7 @@ void adminLogin()
     }
     else
     {
-        printf("\n");
+    printf("\n");
         printNotice("Invalid admin credentials.", 'E');
         printNotice("Access denied.", 'E');
         printNotice("Press any key to continue...", 'I');
@@ -2250,8 +2174,8 @@ void inputUnified(const char *prompt, char *buffer, int size)
     GetConsoleScreenBufferInfo(hConsole, &csbi);
     
     int promptLen = visualLen(prompt);
-    int totalLen = promptLen + size;
-    int pad = calculateCenterPosition(totalLen);
+    // Center based on the prompt text only for consistent alignment
+    int pad = calculateCenterPosition(promptLen);
     
     COORD pos = csbi.dwCursorPosition;
     pos.X = pad;
@@ -2372,14 +2296,23 @@ void inputPasswordUnified(char *buffer, int size)
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_SCREEN_BUFFER_INFO csbi;
     GetConsoleScreenBufferInfo(hConsole, &csbi);
-    
-    // Position cursor at unified block position
+
+    // Build prompt and center it similar to inputUnified
+    const char *prompt = "Password: ";
+    int promptLen = (int)strlen(prompt);
+    int pad = unified_blockStartPos;
+    if (pad == -1) {
+        // Center based on the prompt text only
+        pad = calculateCenterPosition(promptLen);
+    }
+
+    // Position cursor
     COORD pos = csbi.dwCursorPosition;
-    pos.X = unified_blockStartPos;
+    pos.X = pad;
     SetConsoleCursorPosition(hConsole, pos);
-    printf("Password: ");
+    printf("%s", prompt);
     fflush(stdout);
-    
+
     // Read password character by character with hidden input
     int i = 0;
     char ch;

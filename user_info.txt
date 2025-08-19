@@ -6,3 +6,5 @@
 4998,Hamim
 2382,Nafisa
 2111,Sabiha
+1836,Adolf Hitler
+1361,Putin
