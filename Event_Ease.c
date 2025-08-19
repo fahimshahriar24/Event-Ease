@@ -1973,7 +1973,7 @@ void dashboardDesign()
     SetConsoleTextAttribute(h, ci.wAttributes);
 }
 
-// Admin dashboard design with red color
+// Admin dashboard design with red color 
 void adminDashboardDesign()
 {
     HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
